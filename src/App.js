@@ -1,24 +1,24 @@
-import React from 'react';
-import logo from './logo.svg';
+import React, { useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { RightPanel } from './components/RightPanel';
+import { MainZone } from './components/MainZone';
+
 import './App.css';
 
-function App() {
+const App = () => {
+  const dispatch = useDispatch();
+  const editorIds = useSelector(state => state.app.editorIds);
+  const selectedEditorId = useSelector(state => state.ui.selectedEditorId);
+
+  // init
+  useEffect(() => {
+    dispatch({type: 'ADD_EDITORS', payload: { ids: ['editor-3', 'editor-4']}});
+  }, [dispatch]);
+
   return (
     <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.js</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
+      <MainZone editorIds={editorIds} selectedEditorId={selectedEditorId} />
+      <RightPanel selectedEditorId={selectedEditorId} />
     </div>
   );
 }

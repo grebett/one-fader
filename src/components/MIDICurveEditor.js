@@ -20,15 +20,25 @@ const MIDICurveEditor = ({ name, layout, selectedEditorId, restored }) => {
 
   const doubleClickHandler = () => {
     if (selectedEditorId) {
-      dispatch({ type: 'RESTORE_EDITOR_IN_UI', payload: {id: selectedEditorId} });
+      dispatch({ type: 'RESTORE_EDITOR_IN_UI', payload: { id: selectedEditorId } });
     }
-    dispatch({ type: 'SELECT_EDITOR', payload: {id: name} });
-    dispatch({ type: 'REMOVE_EDITOR_IN_UI', payload: {id: name} });
-    widget.dispose();
+    dispatch({ type: 'SELECT_EDITOR', payload: { id: name } });
+    dispatch({ type: 'REMOVE_EDITOR_IN_UI', payload: { id: name } });
+    // for (let i = 0; i < localStorage.length; i++) {
+    //   if (localStorage.key(i).indexOf(name) !== -1) {
+    //     localStorage.removeItem(localStorage.key(i));
+    //   }
+    // }
+  };
+
+  const clickHandler = () => {
+    widget.forceSaveState();
   };
 
   if (layout === 'maximized') {
-    return <div className="MIDI-curve-editor container" ref={widgetContainerRef}></div>;
+    return (
+      <div className="MIDI-curve-editor container" ref={widgetContainerRef} onClick={clickHandler}></div>
+    );
   } else {
     return (
       <div

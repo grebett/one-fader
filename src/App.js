@@ -5,6 +5,8 @@ import { MainZone } from './components/MainZone';
 
 import './App.css';
 
+const createEditorsIds = n => Array(n).fill(0).map((_, i) => `editor-${i}`);
+
 const App = () => {
   const dispatch = useDispatch();
   const editorIds = useSelector(state => state.app.editorIds);
@@ -12,7 +14,7 @@ const App = () => {
 
   // init
   useEffect(() => {
-    dispatch({type: 'ADD_EDITORS', payload: { ids: ['editor-3', 'editor-4']}});
+    dispatch({type: 'ADD_EDITORS', payload: { ids: createEditorsIds(20) }});
   }, [dispatch]);
 
   return (

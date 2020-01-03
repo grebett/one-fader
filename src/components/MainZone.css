@@ -6,6 +6,11 @@
   width: calc(100% - 450px);
   background-color: #1c1a22;
   color: snow;
+  padding-left: 10px;
+}
+
+.main-zone.container h1 {
+  margin-left: 10px;
 }
 
 .MIDI-curve-editor-placeholder {

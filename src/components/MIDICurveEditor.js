@@ -4,6 +4,8 @@ import MojsCurveEditor from 'midi-curve-editor';
 import './MIDICurveEditor.css';
 import { useDispatch } from 'react-redux';
 
+window.curves = [];
+
 const MIDICurveEditor = ({ name, layout, selectedEditorId, restored }) => {
   const widgetContainerRef = useRef(null);
   const [widget, saveWidget] = useState(null);
@@ -13,9 +15,10 @@ const MIDICurveEditor = ({ name, layout, selectedEditorId, restored }) => {
     if (widget) {
       widget.dispose();
     }
-    const editor = new MojsCurveEditor({ name }, widgetContainerRef.current);
-    saveWidget(editor);
-    layout === 'maximized' ? editor.maximize() : editor.minimize();
+    const newEditor = new MojsCurveEditor({ name }, widgetContainerRef.current);
+    saveWidget(newEditor);
+    window.curves.push(newEditor);
+    layout === 'maximized' ? newEditor.maximize() : newEditor.minimize();
   }, [name, layout, restored]);
 
   const doubleClickHandler = () => {

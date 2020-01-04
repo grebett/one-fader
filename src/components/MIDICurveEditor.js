@@ -6,46 +6,37 @@ import { useDispatch } from 'react-redux';
 
 window.curves = [];
 
-const MIDICurveEditor = ({ name, layout, selectedEditorId, restored }) => {
+const MIDICurveEditor = ({ name, layout, isSelected }) => {
   const widgetContainerRef = useRef(null);
   const [widget, saveWidget] = useState(null);
   const dispatch = useDispatch();
 
   useEffect(() => {
-    if (widget) {
-      widget.dispose();
-    }
-    const newEditor = new MojsCurveEditor({ name }, widgetContainerRef.current);
-    saveWidget(newEditor);
-    window.curves.push(newEditor);
-    layout === 'maximized' ? newEditor.maximize() : newEditor.minimize();
-  }, [name, layout, restored]);
+    const widget = new MojsCurveEditor({ name }, widgetContainerRef.current);
+    widget.minimize();
+    saveWidget(widget);
+    dispatch({ type: 'ATTACH_WIDGET_TO_EDITOR', payload: { id: name, widget } });
+  }, [name, layout, dispatch]);
 
   const doubleClickHandler = () => {
-    if (selectedEditorId) {
-      dispatch({ type: 'RESTORE_EDITOR_IN_UI', payload: { id: selectedEditorId } });
-    }
-    dispatch({ type: 'SELECT_EDITOR', payload: { id: name } });
-    dispatch({ type: 'REMOVE_EDITOR_IN_UI', payload: { id: name } });
+    dispatch({ type: 'SELECT_CURVE_EDITOR', payload: { id: name } });
+    widget.maximize();
   };
 
   const clickHandler = () => {
     widget.forceSaveState();
   };
 
-  if (layout === 'maximized') {
-    return (
-      <div className="MIDI-curve-editor container" ref={widgetContainerRef} onClick={clickHandler}></div>
-    );
-  } else {
-    return (
-      <div
-        className="MIDI-curve-editor container"
-        ref={widgetContainerRef}
-        onDoubleClick={doubleClickHandler}
-      ></div>
-    );
+  let className = "MIDI-curve-editor container";
+  if (isSelected) {
+    className += ' selected';
   }
+  return <div
+    className={className}
+    ref={widgetContainerRef}
+    onDoubleClick={doubleClickHandler}
+    onClick={clickHandler}
+  ></div>
 };
 
 export { MIDICurveEditor };

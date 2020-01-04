@@ -9,17 +9,17 @@ const createEditorsIds = n => Array(n).fill(0).map((_, i) => `editor-${i}`);
 
 const App = () => {
   const dispatch = useDispatch();
-  const editorIds = useSelector(state => state.app.editorIds);
-  const selectedEditorId = useSelector(state => state.ui.selectedEditorId);
+  const curveEditors = useSelector(state => state.app.curveEditors);
+  const selectedEditorId = useSelector(state => state.app.selectedEditor);
 
   // init
   useEffect(() => {
-    dispatch({type: 'ADD_EDITORS', payload: { ids: createEditorsIds(20) }});
+    dispatch({type: 'INIT_CURVE_EDITORS', payload: { ids: createEditorsIds(20) }});
   }, [dispatch]);
 
   return (
     <div className="App">
-      <MainZone editorIds={editorIds} selectedEditorId={selectedEditorId} />
+      <MainZone curveEditors={curveEditors} selectedEditorId={selectedEditorId} />
       <RightPanel selectedEditorId={selectedEditorId} />
     </div>
   );

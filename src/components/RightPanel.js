@@ -1,15 +1,15 @@
 import React from 'react';
-import { useDispatch } from 'react-redux';
-
-import { MIDICurveEditor } from './MIDICurveEditor';
+import { useDispatch, useSelector } from 'react-redux';
 
 import './RightPanel.css';
 
 const RightPanel = ({ selectedEditorId }) => {
   const dispatch = useDispatch();
+  const selectedWidget = useSelector(state => state.app.curveEditors.find(editor => editor.id === selectedEditorId));
+
   const unselectEditor = () => {
-    dispatch({ type: 'UNSELECT_EDITOR', payload: {id: selectedEditorId} });
-    dispatch({ type: 'RESTORE_EDITOR_IN_UI', payload: {id: selectedEditorId} });
+    dispatch({ type: 'UNSELECT_CURVE_EDITOR', payload: {id: selectedEditorId} });
+    selectedWidget.widget.minimize();
   };
 
   return <div className="right-panel container">
@@ -17,7 +17,6 @@ const RightPanel = ({ selectedEditorId }) => {
     {selectedEditorId && (
       <>
         <button onClick={unselectEditor}>Close</button>
-        <MIDICurveEditor name={selectedEditorId} layout="maximized" />
       </>
     )}
   </div>

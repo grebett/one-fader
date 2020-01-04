@@ -3,23 +3,20 @@ import { MIDICurveEditor } from './MIDICurveEditor';
 
 import './MainZone.css';
 
-const MainZone = ({ editorIds, selectedEditorId }) => {
+const MainZone = ({ curveEditors, selectedEditorId }) => {
   return (
     <div className="main-zone container">
       <h1>MainZone</h1>
-      {editorIds.map((editorId, i) => {
-        if (editorId) {
-          return (
-            <MIDICurveEditor
-              key={editorId}
-              name={editorId}
-              layout="minimized"
-              selectedEditorId={selectedEditorId}
-            />
-          );
-        } else {
-          return <div key={i} className="MIDI-curve-editor-placeholder"></div>
-        }
+      {curveEditors.map((editor, i) => {
+        const isSelected = selectedEditorId === editor.id;
+        const className = isSelected
+          ? 'MIDI-curve-editor-placeholder'
+          : 'MIDI-curve-editor-container';
+        return (
+          <div key={`midi-curve-editor-wrapper-${i}`} className={className}>
+            <MIDICurveEditor key={editor.id} name={editor.id} layout="minimized" isSelected={isSelected} />
+          </div>
+        );
       })}
     </div>
   );

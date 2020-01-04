@@ -2,7 +2,7 @@
   position: absolute;
   left: 0;
   top: 0;
-  height: 100vh;
+  min-height: 100vh;
   width: calc(100% - 450px);
   background-color: #1c1a22;
   color: snow;
@@ -11,6 +11,11 @@
 
 .main-zone.container h1 {
   margin-left: 10px;
+}
+
+.MIDI-curve-editor-container {
+  display: inline-block;
+  position: relative;
 }
 
 .MIDI-curve-editor-placeholder {

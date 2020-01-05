@@ -14,7 +14,7 @@ const appReducer = (state = initialState, action) => {
         id,
         instrument: 1,
         channel: 1,
-        cc: 1,
+        CC: 1,
         boundaries: [0, 127],
         duration: null,
         MIDIValues: [],

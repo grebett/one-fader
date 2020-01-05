@@ -8,3 +8,19 @@
   padding: 0 20px;
   box-shadow: -2px -2px 0 1px slategray;
 }
+
+.right-panel-controls {
+  margin-top: 500px;
+}
+
+.right-panel-control {
+  display: block;
+}
+
+.right-panel-control label {
+  width: 100px;
+}
+
+.right-panel-control input {
+  width: 30px;
+}

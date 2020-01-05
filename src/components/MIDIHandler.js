@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux';
 const MIDIHandler = () => {
   const editors = useSelector(state => state.app.curveEditors);
   const onMIDIMessage = ({ data, ...rest }) => {
-    const [command, value, velocity] = data;
+    const [, , velocity] = data;
     editors.forEach(editor => {
       if (editor.MIDIValues.length > 0) {
         console.log('🎻', editor.id, '===>', editor.MIDIValues[velocity]);

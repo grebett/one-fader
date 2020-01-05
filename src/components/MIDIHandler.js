@@ -4,9 +4,6 @@ const MIDIHandler = () => {
   const dispatch = useDispatch();
   const onMIDIMessage = ({ data, ...rest }) => {
     const [command, value, velocity] = data;
-    // const pos = (1 / 127) * velocity
-    // const MIDIValue = mojsCurve.getMIDIValue()(pos);
-    // mojsCurve.updateProgressLine(pos);
     dispatch({ type: 'INCOMING_MIDI_DATA', payload: { command, value, velocity } });
   };
 

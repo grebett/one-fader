@@ -2,7 +2,7 @@ import React, { useRef, useEffect, useState } from 'react';
 import '@mojs/core';
 import MojsCurveEditor from 'midi-curve-editor';
 import './MIDICurveEditor.css';
-import { useDispatch } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 
 window.curves = [];
 
@@ -10,6 +10,17 @@ const MIDICurveEditor = ({ name, layout, isSelected, selectedEditorId }) => {
   const widgetContainerRef = useRef(null);
   const [widget, saveWidget] = useState(null);
   const dispatch = useDispatch();
+  const dataIn = useSelector(state => state.app.incomingMIDI);
+
+  useEffect(() => {
+    if (dataIn && widget) {
+      const { velocity } = dataIn;
+      const pos = (1 / 127) * velocity
+      const MIDIValue = widget.getMIDIValue()(pos);
+      // widget.updateProgressLine(pos);
+      console.log(name, MIDIValue);
+    }
+  }, [dataIn, widget]);
 
   useEffect(() => {
     const widget = new MojsCurveEditor({ name }, widgetContainerRef.current);

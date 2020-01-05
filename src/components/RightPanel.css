@@ -9,18 +9,36 @@
   box-shadow: -2px -2px 0 1px slategray;
 }
 
+.right-panel.container button {
+  background-color: #151218;
+  color: white;
+  padding: 5px 10px;
+  font-size: 14px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
 .right-panel-controls {
   margin-top: 500px;
 }
 
 .right-panel-control {
   display: block;
+  margin-bottom: 5px;
+  font-size: 16px;
 }
 
 .right-panel-control label {
+  display: inline-block;
   width: 100px;
 }
 
 .right-panel-control input {
-  width: 30px;
+  width: 40px;
+  height: 14px;
+  margin-right: 5px;
+  border: none;
+  border-radius: 2px;
+  font-size: 14px;
+  padding: 2px 5px;
 }

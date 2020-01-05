@@ -12,10 +12,9 @@ import './index.css';
 
 // React App
 const store = createStore(rootReducer);
-window.store = store;
 ReactDOM.render(
   <Provider store={store}>
-    <App />
+    <App store={store} />
   </Provider>,
   document.getElementById('root'),
 );

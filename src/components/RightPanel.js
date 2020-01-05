@@ -23,7 +23,7 @@ const RightPanel = ({ selectedEditorId }) => {
   };
 
   const useSignUpForm = (callback, selectedEditor = {}) => {
-    const [inputs, setInputs] = useState({ instrument: 0, channel: 0, CC: 0 });
+    const [inputs, setInputs] = useState({ instrument: 1, channel: 1, CC: 1, boundMin: 0, boundMax: 127 });
     const handleSubmit = event => {
       event.preventDefault();
       console.log('called');
@@ -58,8 +58,7 @@ const RightPanel = ({ selectedEditorId }) => {
         <h1>RightPanel</h1>
         {selectedEditorId && (
           <form className="right-panel-controls" onSubmit={handleSubmit}>
-            <input type="submit" onClick={unselectEditor} value="Close" />
-
+            <h3>Sends</h3>
             <div className="right-panel-control">
               <label>Instrument</label>
               <input type="number" name="instrument" value={inputs.instrument} onChange={handleInputChange} />
@@ -72,6 +71,14 @@ const RightPanel = ({ selectedEditorId }) => {
               <label>CC</label>
               <input type="number" name="CC" value={inputs.CC} min={0} max={127} onChange={handleInputChange} />
             </div>
+            <h3>Triggers</h3>
+            <div className="right-panel-control">
+              <label>Boundaries</label>
+              <input type="number" name="boundMin" value={inputs.boundMin} min={0} max={127} onChange={handleInputChange} />
+              <input type="number" name="boundMax" value={inputs.boundMax} min={0} max={127} onChange={handleInputChange} />
+            </div>
+            <br/>
+            <button type="submit" onClick={unselectEditor}>Close</button>
           </form>
         )}
       </div>

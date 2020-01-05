@@ -10,6 +10,7 @@ import rootReducer from './store/reducers';
 import App from './App';
 import './index.css';
 
+// React App
 const store = createStore(rootReducer);
 window.store = store;
 ReactDOM.render(

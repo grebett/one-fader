@@ -2,6 +2,7 @@ import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { RightPanel } from './components/RightPanel';
 import { MainZone } from './components/MainZone';
+import { MIDIHandler } from './components/MIDIHandler';
 
 import './App.css';
 
@@ -19,6 +20,7 @@ const App = () => {
 
   return (
     <div className="App">
+      <MIDIHandler />
       <MainZone curveEditors={curveEditors} selectedEditorId={selectedEditorId} />
       <RightPanel selectedEditorId={selectedEditorId} />
     </div>

@@ -4,6 +4,7 @@ const initialState = {
   page: 0,
   tempo: 60,
   cursor: 0,
+  incomingMIDI: null,
 };
 
 const appReducer = (state = initialState, action) => {
@@ -53,7 +54,17 @@ const appReducer = (state = initialState, action) => {
       return { ...state, tempo };
     case 'UPDATE_GLOBAL_CURSOR_POSITION':
       const { cursor } = action.payload;
-      return { ...state, cursor }
+      return { ...state, cursor };
+    case 'INCOMING_MIDI_DATA':
+      const { command, value, velocity } = action.payload;
+      return {
+        ...state,
+        incomingMIDI: {
+          command,
+          value,
+          velocity,
+        },
+      };
     default:
       return state;
   }

@@ -1,10 +1,14 @@
-import { useDispatch } from 'react-redux';
+import { useSelector } from 'react-redux';
 
 const MIDIHandler = () => {
-  const dispatch = useDispatch();
+  const editors = useSelector(state => state.app.curveEditors);
   const onMIDIMessage = ({ data, ...rest }) => {
     const [command, value, velocity] = data;
-    dispatch({ type: 'INCOMING_MIDI_DATA', payload: { command, value, velocity } });
+    editors.forEach(editor => {
+      if (editor.MIDIValues.length > 0) {
+        console.log(editor.MIDIValues[velocity]);
+      }
+    })
   };
 
   (async () => {

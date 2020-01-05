@@ -4,7 +4,6 @@ const initialState = {
   page: 0,
   tempo: 60,
   cursor: 0,
-  incomingMIDI: null,
 };
 
 const appReducer = (state = initialState, action) => {
@@ -13,12 +12,12 @@ const appReducer = (state = initialState, action) => {
       const { ids } = action.payload;
       const curveEditors = ids.map(id => ({
         id,
-        midiValue: 0,
         instrument: 1,
         channel: 1,
         cc: 1,
         boundaries: [0, 127],
         duration: null,
+        MIDIValues: [],
       }));
       return { ...state, curveEditors };
     }
@@ -55,16 +54,6 @@ const appReducer = (state = initialState, action) => {
     case 'UPDATE_GLOBAL_CURSOR_POSITION':
       const { cursor } = action.payload;
       return { ...state, cursor };
-    case 'INCOMING_MIDI_DATA':
-      const { command, value, velocity } = action.payload;
-      return {
-        ...state,
-        incomingMIDI: {
-          command,
-          value,
-          velocity,
-        },
-      };
     default:
       return state;
   }

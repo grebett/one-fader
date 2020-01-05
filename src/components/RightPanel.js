@@ -5,21 +5,30 @@ import './RightPanel.css';
 
 const RightPanel = ({ selectedEditorId }) => {
   const dispatch = useDispatch();
-  const selectedWidget = useSelector(state => state.app.curveEditors.find(editor => editor.id === selectedEditorId));
+  const selectedWidget = useSelector(state =>
+    state.app.curveEditors.find(editor => editor.id === selectedEditorId),
+  );
 
   const unselectEditor = () => {
-    dispatch({ type: 'UNSELECT_CURVE_EDITOR', payload: {id: selectedEditorId} });
+    dispatch({ type: 'UNSELECT_CURVE_EDITOR', payload: { id: selectedEditorId } });
     selectedWidget.widget.minimize();
+    const MIDIValues = [];
+    for (let i = 0; i < 1; i += 1 / 127) {
+      MIDIValues.push(selectedWidget.widget.getMIDIValue()(i));
+    }
+    dispatch({ type: 'UPDATE_CURVE_EDITOR_PARAMETERS', payload: { id: selectedEditorId, parameters: { MIDIValues } } });
   };
 
-  return <div className="right-panel container">
-    <h1>RightPanel</h1>
-    {selectedEditorId && (
-      <>
-        <button onClick={unselectEditor}>Close</button>
-      </>
-    )}
-  </div>
+  return (
+    <div className="right-panel container">
+      <h1>RightPanel</h1>
+      {selectedEditorId && (
+        <>
+          <button onClick={unselectEditor}>Close</button>
+        </>
+      )}
+    </div>
+  );
 };
 
 export { RightPanel };

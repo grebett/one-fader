@@ -9,7 +9,7 @@
 
 .MIDI-curve-editor.container.selected {
   position: fixed;
-  top: 30px;
-  right: 0px;
+  top: 100px;
+  right: 230px;
   z-index: 5;
 }

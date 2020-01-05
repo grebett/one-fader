@@ -6,7 +6,7 @@ import { useDispatch } from 'react-redux';
 
 window.curves = [];
 
-const MIDICurveEditor = ({ name, layout, isSelected }) => {
+const MIDICurveEditor = ({ name, layout, isSelected, selectedEditorId }) => {
   const widgetContainerRef = useRef(null);
   const [widget, saveWidget] = useState(null);
   const dispatch = useDispatch();
@@ -19,8 +19,10 @@ const MIDICurveEditor = ({ name, layout, isSelected }) => {
   }, [name, layout, dispatch]);
 
   const doubleClickHandler = () => {
-    dispatch({ type: 'SELECT_CURVE_EDITOR', payload: { id: name } });
-    widget.maximize();
+    if (!selectedEditorId) {
+      dispatch({ type: 'SELECT_CURVE_EDITOR', payload: { id: name } });
+      widget.maximize();
+    }
   };
 
   const clickHandler = () => {

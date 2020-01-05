@@ -1,9 +1,9 @@
 .right-panel.container {
-  position: fixed;
+  position: absolute;
   right: 0;
   top: 0;
   height: 100vh;
-  width: 450px;
+  width: 440px;
   background-color: rgb(244, 205, 96);
   padding: 0 20px;
   box-shadow: -2px -2px 0 1px slategray;

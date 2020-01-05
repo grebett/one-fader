@@ -9,12 +9,16 @@ const MainZone = ({ curveEditors, selectedEditorId }) => {
       <h1>MainZone</h1>
       {curveEditors.map((editor, i) => {
         const isSelected = selectedEditorId === editor.id;
-        const className = isSelected
-          ? 'MIDI-curve-editor-placeholder'
-          : 'MIDI-curve-editor-container';
+        const className = isSelected ? 'MIDI-curve-editor-placeholder' : 'MIDI-curve-editor-container';
         return (
           <div key={`midi-curve-editor-wrapper-${i}`} className={className}>
-            <MIDICurveEditor key={editor.id} name={editor.id} layout="minimized" isSelected={isSelected} />
+            <MIDICurveEditor
+              key={editor.id}
+              name={editor.id}
+              layout="minimized"
+              isSelected={isSelected}
+              selectedEditorId={selectedEditorId}
+            />
           </div>
         );
       })}

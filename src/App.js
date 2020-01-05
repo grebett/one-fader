@@ -15,7 +15,7 @@ const App = () => {
 
   // init
   useEffect(() => {
-    dispatch({type: 'INIT_CURVE_EDITORS', payload: { ids: createEditorsIds(2) }});
+    dispatch({type: 'INIT_CURVE_EDITORS', payload: { ids: createEditorsIds(16) }});
   }, [dispatch]);
 
   return (

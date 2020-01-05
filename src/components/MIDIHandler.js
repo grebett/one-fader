@@ -6,7 +6,7 @@ const MIDIHandler = () => {
     const [command, value, velocity] = data;
     editors.forEach(editor => {
       if (editor.MIDIValues.length > 0) {
-        console.log(editor.MIDIValues[velocity]);
+        console.log('🎻', editor.id, '===>', editor.MIDIValues[velocity]);
       }
     })
   };

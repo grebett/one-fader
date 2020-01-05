@@ -5,6 +5,7 @@
   width: 220px;
   height: 180px;
   cursor: pointer;
+  z-index: 1;
 }
 
 .MIDI-curve-editor.container.selected {
@@ -12,4 +13,24 @@
   top: 100px;
   right: 230px;
   z-index: 5;
+}
+
+.MIDI-curve-editor--widget-name {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: rotate(90deg) translate(100px, -40px);
+  transform-origin: top left;
+  z-index: 6;
+  user-select: none;
+}
+
+.MIDI-curve-editor--widget-name.selected {
+  position: absolute;
+  top: 0;
+  left: 0;
+  transform: rotate(90deg) translate(300px, -40px);
+  transform-origin: top left;
+  z-index: 6;
+  user-select: none;
 }

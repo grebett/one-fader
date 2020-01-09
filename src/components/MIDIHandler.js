@@ -1,66 +1,57 @@
-
+import midi from 'webmidi';
 
 const MIDIHandler = () => {
   let store = null;
 
-  const onMIDIMessage = ({port, from, outputs}) => ({ data }) => {
-    // 0) We need a bound react Redux store to start dispatching modified MIDI events
-    if (!store) {
+  midi.enable(err => {
+    if (err) {
+      console.log('WebMidi could not be enabled.', err);
       return;
     }
-    // 1) Parse Incoming MIDI data
-    const [command, value, velocity] = data;
-    const IACInstrument = n => `IAC Driver Bus ${n}`;
+    // midi.inputs.forEach(input => console.log(input.name)); // debug
+    // midi.outputs.forEach(output => console.log(output.name)); // debug
 
-    // 2) FORWARD EVERYTHING FROM DIVISIMATE TO AGREGATE VIRTUAL DEVICE
-    if (from === 'Divisimate') {
-      console.log('1️⃣from', from, 'port', port)
-      console.log('2️⃣command', command, 'value', value, 'velocity', velocity);
-      for (let output = outputs.next(); output && !output.done; output = outputs.next()) {
-        if (output.value.name === IACInstrument(port)) {
-          console.log(IACInstrument(port));
-          // output.value.send([command, value, velocity]);
-          console.log(output.value);
-          output.value.send([0x90, 0x3b, 0x5e], window.performance.now() + 1000.0);
+    const Divisimate01 = midi.getInputByName('Divisimate Port 01');
+    const Divisimate02 = midi.getInputByName('Divisimate Port 02');
+    const Divisimate03 = midi.getInputByName('Divisimate Port 03');
+    const Divisimate04 = midi.getInputByName('Divisimate Port 04');
+    const MIDITouchbar = midi.getInputByName('MIDI Touchbar User');
+    const IACDriverBus1 = midi.getOutputByName('IAC Driver Bus 1');
+    const IACDriverBus2 = midi.getOutputByName('IAC Driver Bus 2');
+    const IACDriverBus3 = midi.getOutputByName('IAC Driver Bus 3');
+    const IACDriverBus4 = midi.getOutputByName('IAC Driver Bus 4');
+    const outputs = [IACDriverBus1, IACDriverBus2, IACDriverBus3, IACDriverBus4];
+
+    // Simple forward from Divisimate to IAC Driver buses ; should I filter all but the notes?
+    Divisimate01.addListener('midimessage', undefined, ({ data }) => IACDriverBus1.send(data[0], [data[1], data[2]]));
+    Divisimate02.addListener('midimessage', undefined, ({ data }) => IACDriverBus2.send(data[0], [data[1], data[2]]));
+    Divisimate03.addListener('midimessage', undefined, ({ data }) => IACDriverBus3.send(data[0], [data[1], data[2]]));
+    Divisimate04.addListener('midimessage', undefined, ({ data }) => IACDriverBus4.send(data[0], [data[1], data[2]]));
+
+    // One Fader to rule them all, One Fader to find them,
+    // One Fader to bring them all and in the music bind them
+    // In the Land of MIDI where the CCs lie.
+    store.subscribe(() => { // TODO: we should make the first call before a subscribe !
+      MIDITouchbar.removeListener('controlchange', 'all');
+      const editors = store.getState().app.curveEditors;
+      console.log(editors);
+      MIDITouchbar.addListener('controlchange', 'all', ({ data }) => {
+        const [, inputCC, inputValue] = data;
+        if (inputCC === 1) {
+          for (let i = 0; i < editors.length; i++) {
+            const editor = editors[i];
+            const outputValue = editor.MIDIValues[inputValue];
+            const output = outputs[parseInt(editor.instrument, 10) - 1];
+            const outputCC = parseInt(editor.CC, 10);
+            console.log(outputCC, outputValue);
+            output.sendControlChange(outputCC, outputValue);
+          }
         }
-      }
-    } else {
-      // // 3) COMPUTE NEW MIDI VALUE FROM EDITOR AND SEND TO AGREGATE VIRTUAL DEVICE
-      // const editors = store.getState().app.curveEditors;
-      // editors.forEach(editor => {
-      //   if (editor.MIDIValues.length > 0) {
-      //     const value = editor.MIDIValues[velocity];
-      //     const channel = editor.channel;
-      //     const CC = editor.CC;
-      //     const boundaries = [editor.boundMin, editor.boundMax];
-      //     console.log('4️⃣new value', value, 'channel', channel, 'CC', CC, 'boundaries', boundaries);
-      //   }
-      // });
-    }
-  };
+      });
+    });
+  });
 
-  (async () => {
-    if (navigator.requestMIDIAccess) {
-      const midi = await navigator.requestMIDIAccess();
-      const inputs = midi.inputs.values();
-      const outputs = midi.outputs.values();
-      // loop over all available inputs and listen for any MIDI input
-      for (let input = inputs.next(); input && !input.done; input = inputs.next()) {
-        if (input.value.name.indexOf('Divisimate') !== -1) {
-          const port = input.value.name.match(/Divisimate Port (\d+)/)[1];
-          input.value.onmidimessage = null;
-          input.value.onmidimessage = onMIDIMessage({ from: 'Divisimate', port: parseInt(port, 10), outputs });
-        } else {
-          input.value.onmidimessage = null;
-          input.value.onmidimessage = onMIDIMessage({ from: input.value.name, outputs });
-        }
-      }
-    } else {
-      throw new Error('MIDI is not supported on your device!');
-    }
-  })();
-
-  return reduxStore => store = reduxStore;
+  return reduxStore => (store = reduxStore);
 };
 
 export { MIDIHandler };

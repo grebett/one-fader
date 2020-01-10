@@ -1,6 +1,9 @@
 import midi from 'webmidi';
 import config from '../config/config.json';
 
+//////////
+// UTILS
+//////////
 const getDivisimatePorts = n => {
   const padding = n => (n < 10 ? `0${n}` : n);
   return Array(n)
@@ -40,6 +43,9 @@ const getControllers = controllers => {
   });
 };
 
+//////////////
+// Component
+//////////////
 const MIDIHandler = () => {
   let store = null;
 
@@ -48,16 +54,17 @@ const MIDIHandler = () => {
       console.log('WebMidi could not be enabled.', err);
       return;
     }
-    // midi.inputs.forEach(input => console.log(input.name)); // debug
-    // midi.outputs.forEach(output => console.log(output.name)); // debug
 
+    // 0] get all 32 inputs and 32 outputs
     const divisimatePorts = getDivisimatePorts(32);
     const IACDriverBuses = getIACDriverBuses(32);
-    const controllers = getControllers(config.controllers);
+    // midi.inputs.forEach(input => console.log(input.name));
+    // midi.outputs.forEach(output => console.log(output.name));
 
+    // 1]
     // Simple forward from Divisimate to IAC Driver buses ; should I filter all but the notes?
-    const formatMIDIOutMessage = data => [data[0], [data[1], data[2]]];
     const proxyAllMIDIMessages = (inputs, outputs) => {
+      const formatMIDIOutMessage = data => [data[0], [data[1], data[2]]];
       inputs.forEach((input, i) =>
         input.addListener('midimessage', undefined, ({ data }) =>
           // console.log(outputs[i]),
@@ -67,30 +74,33 @@ const MIDIHandler = () => {
     };
     proxyAllMIDIMessages(divisimatePorts, IACDriverBuses);
 
+    // 2]
     // One Fader to rule them all, One Fader to find them,
     // One Fader to bring them all and in the music bind them
     // In the Land of MIDI where the CCs lie.
-    const oneFader = () => {
-      controllers[0].removeListener('controlchange', 'all');
-      const editors = store.getState().app.curveEditors;
-      // all channels ???
-      controllers[0].addListener('controlchange', 'all', ({ data }) => {
-        console.log(data);
+    const onControlChange = (controller, editors) => {
+      controller.addListener('controlchange', 'all', ({ data }) => {
         const [, inputCC, inputValue] = data;
-        if (inputCC === 1) {
+        if (controller.getCcNameByNumber(inputCC) === 'modulationwheelcoarse') {
           for (let i = 0; i < editors.length; i++) {
             const editor = editors[i];
             const outputValue = editor.MIDIValues[inputValue];
             const output = IACDriverBuses[parseInt(editor.instrument, 10) - 1];
             const outputCC = parseInt(editor.CC, 10);
-            console.log(outputCC, outputValue);
             output.sendControlChange(outputCC, outputValue);
           }
         }
       });
     };
-    oneFader();
-    store.subscribe(oneFader);
+
+    const main = () => {
+      const controllers = getControllers(config.controllers);
+      controllers.forEach(controller => controller.removeListener('controlchange', 'all'));
+      controllers.forEach(controller => onControlChange(controller, store.getState().app.curveEditors));
+    };
+
+    main();
+    store.subscribe(main);
   });
   return reduxStore => (store = reduxStore);
 };

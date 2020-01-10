@@ -1,5 +1,6 @@
 {
   "controllers": [
-    "MIDI Touchbar User"
+    "MIDI Touchbar User",
+    "VMPK Output"
   ]
 }

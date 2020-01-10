@@ -23,11 +23,9 @@ const RightPanel = ({ selectedEditorId }) => {
   };
 
   const useSignUpForm = (callback, selectedEditor = {}) => {
-    const [inputs, setInputs] = useState({ instrument: 1, channel: 1, CC: 1, boundMin: 0, boundMax: 127 });
+    const [inputs, setInputs] = useState({ instrument: 1, channels: '1', CC: 1, boundMin: 0, boundMax: 127 });
     const handleSubmit = event => {
       event.preventDefault();
-      console.log('called');
-      // setInputs(() => ({}));
       callback();
       return false;
     };
@@ -64,8 +62,8 @@ const RightPanel = ({ selectedEditorId }) => {
               <input type="number" name="instrument" value={inputs.instrument} onChange={handleInputChange} />
             </div>
             <div className="right-panel-control">
-              <label>Channel</label>
-              <input type="number" name="channel" min={0} max={16} value={inputs.channel} onChange={handleInputChange} />
+              <label>Channels</label>
+              <input type="text" name="channels" value={inputs.channels} onChange={handleInputChange} />
             </div>
             <div className="right-panel-control">
               <label>CC</label>

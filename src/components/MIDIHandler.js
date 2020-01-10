@@ -35,12 +35,12 @@ const getControllers = controllers => {
   return controllers.map(controller => {
     const input = midi.getInputByName(controller);
     if (!input) {
-      throw new Error(
+      console.warn(
         `${controller} hasn't been found. Check if controller is properly connected or update config.json accordingly.`,
       );
     }
     return input;
-  });
+  }).filter(controller => controller);
 };
 
 //////////////
@@ -67,7 +67,6 @@ const MIDIHandler = () => {
       const formatMIDIOutMessage = data => [data[0], [data[1], data[2]]];
       inputs.forEach((input, i) =>
         input.addListener('midimessage', undefined, ({ data }) =>
-          // console.log(outputs[i]),
           outputs[i].send(...formatMIDIOutMessage(data)),
         ),
       );
@@ -83,11 +82,11 @@ const MIDIHandler = () => {
         const [, inputCC, inputValue] = data;
         if (controller.getCcNameByNumber(inputCC) === 'modulationwheelcoarse') {
           for (let i = 0; i < editors.length; i++) {
-            const editor = editors[i];
-            const outputValue = editor.MIDIValues[inputValue];
-            const output = IACDriverBuses[parseInt(editor.instrument, 10) - 1];
-            const outputCC = parseInt(editor.CC, 10);
-            output.sendControlChange(outputCC, outputValue);
+            const { CC, instrument, channels, MIDIValues } = editors[i];
+            const outputValue = MIDIValues[inputValue];
+            const output = IACDriverBuses[parseInt(instrument, 10) - 1];
+            const outputCC = parseInt(CC, 10);
+            output.sendControlChange(outputCC, outputValue, channels.split(','));
           }
         }
       });
@@ -95,6 +94,12 @@ const MIDIHandler = () => {
 
     const main = () => {
       const controllers = getControllers(config.controllers);
+      console.log(controllers);
+      if (!controllers.length) {
+        throw new Error(
+          'No input controller has been found. Please check if the one you want to use are properly set connected and listed in the config.json file.',
+        );
+      }
       controllers.forEach(controller => controller.removeListener('controlchange', 'all'));
       controllers.forEach(controller => onControlChange(controller, store.getState().app.curveEditors));
     };

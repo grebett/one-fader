@@ -13,7 +13,7 @@ const appReducer = (state = initialState, action) => {
       const curveEditors = ids.map(id => ({
         id,
         instrument: 1,
-        channel: 1,
+        channels: '1',
         CC: 1,
         boundMin: 0,
         boundMax: 127,

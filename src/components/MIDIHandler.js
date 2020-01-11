@@ -43,6 +43,36 @@ const getControllers = controllers => {
   }).filter(controller => controller);
 };
 
+// This function accepts two parameters:
+// length => in beat (eg. in a 4/4 signature, 4 gives a full-bar length, 1/4 a quarter, etc.)
+// BPM => beats per minute ; set globally or per editor
+const callbackOnTick = callback => {
+  const length = 4;
+  const BPM = 60;
+  const beatValue = 60 / BPM * 1000;
+  const bar = beatValue * length;
+  const tick = bar / 127;
+
+  let pos = 0;
+  let i = 0;
+  let currentBeat = 0;
+  const timeLimitedCallback = () => {
+    if (pos >= bar) {
+      clearInterval(interval);
+      return;
+    }
+    if (Math.abs(pos) >= currentBeat + beatValue) {
+      currentBeat = currentBeat + beatValue;
+    }
+    pos += tick;
+    i++;
+    callback(i);
+  };
+  const interval = setInterval(timeLimitedCallback, tick);
+  timeLimitedCallback();
+  return () => console.log('detaching callback') || clearInterval(interval);
+};
+
 //////////////
 // Component
 //////////////
@@ -94,19 +124,41 @@ const MIDIHandler = () => {
 
     const main = () => {
       const controllers = getControllers(config.controllers);
-      console.log(controllers);
       if (!controllers.length) {
         throw new Error(
           'No input controller has been found. Please check if the one you want to use are properly set connected and listed in the config.json file.',
         );
       }
+
+      // 1) fader based
       controllers.forEach(controller => controller.removeListener('controlchange', 'all'));
       controllers.forEach(controller => onControlChange(controller, store.getState().app.curveEditors));
+
+      // 2) time based
+      const playingNotes = Array(127).fill(null);
+      const handleNoteOnNoteOff = ({ note, type }) => {
+        if (type === 'noteon') {
+          const cancelCallbackOnTick = callbackOnTick(i => {
+            const { CC, instrument, channels, MIDIValues } = store.getState().app.curveEditors[0];
+            const outputValue = MIDIValues[i];
+            const output = IACDriverBuses[parseInt(instrument, 10) - 1];
+            const outputCC = parseInt(CC, 10);
+            output.sendControlChange(outputCC, outputValue, channels.split(','));
+          });
+          playingNotes[note.number] = cancelCallbackOnTick;
+        } else {
+          playingNotes[note.number]();
+          playingNotes[note.number] = null;
+        }
+      };
+      controllers[0].addListener('noteon', 'all', handleNoteOnNoteOff);
+      controllers[0].addListener('noteoff', 'all', handleNoteOnNoteOff);
     };
 
     main();
     store.subscribe(main);
   });
+
   return reduxStore => (store = reduxStore);
 };
 

@@ -7,7 +7,7 @@ import config from '../config/config.json';
 
 const PROXY_ENABLED = true;
 const ONE_FADER_ENABLED = true;
-const NOTE_TRIGGERED_ENABLED = false;
+const NOTE_TRIGGERED_ENABLED = true;
 
 //////////
 // UTILS

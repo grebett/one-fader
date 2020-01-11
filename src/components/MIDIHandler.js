@@ -1,6 +1,14 @@
 import midi from 'webmidi';
 import config from '../config/config.json';
 
+//////////////////
+// FEATURE FLAGS
+//////////////////
+
+const PROXY_ENABLED = true;
+const ONE_FADER_ENABLED = true;
+const NOTE_TRIGGERED_ENABLED = false;
+
 //////////
 // UTILS
 //////////
@@ -49,7 +57,7 @@ const getControllers = controllers => {
 // BPM => beats per minute ; set globally or per editor
 // TODO: improve perfs and get rid of the if forest
 const setCallbackOnTick = (
-  { BPM, duration, loop } = { BPM: 60, duration: 4, loop: 'restart' },
+  { BPM, duration, loop } = { BPM: 60, duration: 4, loop: false },
 ) => callback => {
   const beatValue = (60 / BPM) * 1000;
   const bar = beatValue * duration;
@@ -123,17 +131,26 @@ const MIDIHandler = () => {
         throw new Error('No editor has been found. Check the App component...');
       }
 
+      // -1] clean previously attached events
+      controllers.forEach(controller => controller.removeListener('controlchange', 'all'));
+      controllers.forEach(controller => controller.removeListener('noteoff', 'all'));
+      controllers.forEach(controller => controller.removeListener('noteon', 'all'));
+      divisimatePorts.forEach(input => input.removeListener('midimessage', 'all'));
+
       // 0] proxy all MIDI messages from Divisimate ports to according IAC Driver buses
-      // Q? Should I proxy only the notes
+      // Q? Should I proxy only the notes: for now, just ignore CC1
       const proxyAllMIDIMessages = (inputs, outputs) => {
         const formatMIDIOutMessage = data => [data[0], [data[1], data[2]]];
         inputs.forEach((input, i) =>
-          input.addListener('midimessage', undefined, ({ data }) =>
-            outputs[i].send(...formatMIDIOutMessage(data)),
-          ),
+          input.addListener('midimessage', undefined, ({ data }) => {
+            if (data[0] === 176 && data[1] === 1) {
+              return;
+            }
+            outputs[i].send(...formatMIDIOutMessage(data));
+          }),
         );
       };
-      proxyAllMIDIMessages(divisimatePorts, IACDriverBuses);
+      PROXY_ENABLED && proxyAllMIDIMessages(divisimatePorts, IACDriverBuses);
 
       // 1] One-Fader
       // on CC1, ch1, from one of the controller
@@ -147,8 +164,7 @@ const MIDIHandler = () => {
           }
         });
       };
-      controllers.forEach(controller => controller.removeListener('controlchange', 'all'));
-      controllers.forEach(controller => onControlChange(controller, editors));
+      ONE_FADER_ENABLED && controllers.forEach(controller => onControlChange(controller, editors));
 
       // 2] Note triggered CCs
       // for every editor which is note triggered, on note-on/note-off messages
@@ -158,7 +174,7 @@ const MIDIHandler = () => {
       // a) no more events are sent
       // b) the cursor start again from the begining and goes forward
       // c) the cursor goes backward, then when it reaches the beginning, goes forward again, and so on
-      editors.forEach(editor => {
+      NOTE_TRIGGERED_ENABLED && editors.forEach(editor => {
         const { duration, loop } = editor;
         if (duration) {
           const playingNotes = Array(127).fill(null);

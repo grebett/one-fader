@@ -1,13 +1,12 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
 import './RightPanel.css';
 
 const RightPanel = ({ selectedEditorId }) => {
   const dispatch = useDispatch();
-  const selectedEditor = useSelector(state =>
-    state.app.curveEditors.find(editor => editor.id === selectedEditorId),
-  );
+  const findEditor = editors => editors.find(editor => editor.id === selectedEditorId);
+  const selectedEditor = useSelector(state => findEditor(state.app.curveEditors));
 
   const unselectEditor = () => {
     dispatch({ type: 'UNSELECT_CURVE_EDITOR', payload: { id: selectedEditorId } });
@@ -23,17 +22,24 @@ const RightPanel = ({ selectedEditorId }) => {
   };
 
   const useSignUpForm = callback => {
-    const [inputs, setInputs] = useState({
-      instrument: 1,
-      channels: '1',
-      CC: 1,
-      boundMin: 0,
-      boundMax: 127,
-      rangeMin: 0,
-      rangeMax: 0,
-      duration: '',
-      loop: false,
+    const inputs = useSelector(state => {
+      const editor = findEditor(state.app.curveEditors);
+      if (editor) {
+        return editor;
+      }
+      return {
+        instrument: 1,
+        channels: '1',
+        CC: 1,
+        boundMin: 0,
+        boundMax: 127,
+        rangeMin: 0,
+        rangeMax: 0,
+        duration: '',
+        loop: false,
+      };
     });
+
     const handleSubmit = event => {
       event.preventDefault();
       callback();
@@ -42,12 +48,12 @@ const RightPanel = ({ selectedEditorId }) => {
 
     const handleInputChange = event => {
       event.persist();
-      setInputs(inputs => ({ ...inputs, [event.target.name]: event.target.value }));
       dispatch({
         type: 'UPDATE_CURVE_EDITOR_PARAMETERS',
         payload: { id: selectedEditorId, parameters: { [event.target.name]: event.target.value } },
       });
     };
+
     return {
       handleSubmit,
       handleInputChange,
@@ -69,7 +75,13 @@ const RightPanel = ({ selectedEditorId }) => {
             <h3>Sends</h3>
             <div className="right-panel-control">
               <label>Instrument</label>
-              <input type="number" name="instrument" value={inputs.instrument} onChange={handleInputChange} />
+              <input
+                type="number"
+                name="instrument"
+                min={1}
+                value={inputs.instrument}
+                onChange={handleInputChange}
+              />
             </div>
             <div className="right-panel-control">
               <label>Channels</label>
@@ -100,11 +112,7 @@ const RightPanel = ({ selectedEditorId }) => {
             </div>
             <div className="right-panel-control">
               <label>Loop</label>
-              <select
-                name="loop"
-                value={inputs.loop}
-                onChange={handleInputChange}
-              >
+              <select name="loop" value={inputs.loop} onChange={handleInputChange}>
                 <option value="">false</option>
                 <option value="restart">restart</option>
                 <option value="bounce">bounce</option>
@@ -120,6 +128,7 @@ const RightPanel = ({ selectedEditorId }) => {
                 min={0}
                 max={127}
                 onChange={handleInputChange}
+                disabled
               />
               <input
                 type="number"
@@ -128,6 +137,7 @@ const RightPanel = ({ selectedEditorId }) => {
                 min={0}
                 max={127}
                 onChange={handleInputChange}
+                disabled
               />
             </div>
             <div className="right-panel-control">
@@ -135,18 +145,20 @@ const RightPanel = ({ selectedEditorId }) => {
               <input
                 type="number"
                 name="rangeMin"
-                value={inputs.boundMin}
+                value={inputs.rangeMin}
                 min={0}
                 max={127}
                 onChange={handleInputChange}
+                disabled
               />
               <input
                 type="number"
                 name="rangeMax"
-                value={inputs.boundMax}
+                value={inputs.rangeMax}
                 min={0}
                 max={127}
                 onChange={handleInputChange}
+                disabled
               />
             </div>
             <br />

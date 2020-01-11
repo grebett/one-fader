@@ -17,7 +17,7 @@ const App = ({ store }) => {
 
   // init
   useEffect(() => {
-    dispatch({type: 'INIT_CURVE_EDITORS', payload: { ids: createEditorsIds(1) }});
+    dispatch({type: 'INIT_CURVE_EDITORS', payload: { ids: createEditorsIds(2) }});
     bindStoreToMIDIHandler(store);
   }, [dispatch, store]);
 

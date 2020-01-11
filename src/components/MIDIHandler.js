@@ -32,15 +32,17 @@ const getIACDriverBuses = n => {
 };
 
 const getControllers = controllers => {
-  return controllers.map(controller => {
-    const input = midi.getInputByName(controller);
-    if (!input) {
-      console.warn(
-        `${controller} hasn't been found. Check if controller is properly connected or update config.json accordingly.`,
-      );
-    }
-    return input;
-  }).filter(controller => controller);
+  return controllers
+    .map(controller => {
+      const input = midi.getInputByName(controller);
+      if (!input) {
+        console.warn(
+          `${controller} hasn't been found. Check if controller is properly connected or update config.json accordingly.`,
+        );
+      }
+      return input;
+    })
+    .filter(controller => controller);
 };
 
 // This function accepts two parameters:
@@ -50,7 +52,7 @@ const getControllers = controllers => {
 const callbackOnTick = (callback, loop = 'bounce') => {
   const length = 4;
   const BPM = 60;
-  const beatValue = 60 / BPM * 1000;
+  const beatValue = (60 / BPM) * 1000;
   const bar = beatValue * length;
   const tick = bar / 127;
   let pos = 0;
@@ -79,6 +81,14 @@ const callbackOnTick = (callback, loop = 'bounce') => {
   const interval = setInterval(timeLimitedCallback, tick);
   timeLimitedCallback();
   return () => clearInterval(interval);
+};
+
+const computeCCAndSendToIACDriverBuses = (inputValue, editor, IACDriverBuses) => {
+  const { CC, instrument, channels, MIDIValues } = editor;
+  const outputValue = MIDIValues[inputValue];
+  const output = IACDriverBuses[parseInt(instrument, 10) - 1];
+  const outputCC = parseInt(CC, 10);
+  output.sendControlChange(outputCC, outputValue, channels.split(','));
 };
 
 //////////////
@@ -119,48 +129,43 @@ const MIDIHandler = () => {
       controller.addListener('controlchange', 'all', ({ data }) => {
         const [, inputCC, inputValue] = data;
         if (controller.getCcNameByNumber(inputCC) === 'modulationwheelcoarse') {
-          for (let i = 0; i < editors.length; i++) {
-            const { CC, instrument, channels, MIDIValues } = editors[i];
-            const outputValue = MIDIValues[inputValue];
-            const output = IACDriverBuses[parseInt(instrument, 10) - 1];
-            const outputCC = parseInt(CC, 10);
-            output.sendControlChange(outputCC, outputValue, channels.split(','));
-          }
+          editors.forEach(editor => computeCCAndSendToIACDriverBuses(inputValue, editor, IACDriverBuses));
         }
       });
     };
 
     const main = () => {
       const controllers = getControllers(config.controllers);
+      const editors = store.getState().app.curveEditors;
       if (!controllers.length) {
         throw new Error(
           'No input controller has been found. Please check if the one you want to use are properly set connected and listed in the config.json file.',
         );
       }
 
+      if (!editors.length) {
+        throw new Error('No editor has been found. Check the App component...');
+      }
+
       // 1) fader based
       controllers.forEach(controller => controller.removeListener('controlchange', 'all'));
-      controllers.forEach(controller => onControlChange(controller, store.getState().app.curveEditors));
+      controllers.forEach(controller => onControlChange(controller, editors));
 
       // 2) time based
       const playingNotes = Array(127).fill(null);
       const handleNoteOnNoteOff = ({ note, type }) => {
         if (type === 'noteon') {
-          const cancelCallbackOnTick = callbackOnTick(i => {
-            const { CC, instrument, channels, MIDIValues } = store.getState().app.curveEditors[0]; // TMP, replace 0
-            const outputValue = MIDIValues[i];
-            const output = IACDriverBuses[parseInt(instrument, 10) - 1];
-            const outputCC = parseInt(CC, 10);
-            output.sendControlChange(outputCC, outputValue, channels.split(','));
-          });
+          const cancelCallbackOnTick = callbackOnTick(i =>
+            editors.forEach(editor => computeCCAndSendToIACDriverBuses(i, editor, IACDriverBuses)),
+          );
           playingNotes[note.number] = cancelCallbackOnTick;
         } else {
           playingNotes[note.number]();
           playingNotes[note.number] = null;
         }
       };
-      controllers[1].addListener('noteon', 'all', handleNoteOnNoteOff); // TMP, replace 0
-      controllers[1].addListener('noteoff', 'all', handleNoteOnNoteOff); // TMP, replace 0
+      controllers.forEach(controller => controller.addListener('noteon', 'all', handleNoteOnNoteOff));
+      controllers.forEach(controller => controller.addListener('noteoff', 'all', handleNoteOnNoteOff));
     };
 
     main();

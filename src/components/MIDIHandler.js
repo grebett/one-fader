@@ -46,31 +46,39 @@ const getControllers = controllers => {
 // This function accepts two parameters:
 // length => in beat (eg. in a 4/4 signature, 4 gives a full-bar length, 1/4 a quarter, etc.)
 // BPM => beats per minute ; set globally or per editor
-const callbackOnTick = callback => {
+// TODO: improve perfs and get rid of the if forest
+const callbackOnTick = (callback, loop = 'bounce') => {
   const length = 4;
   const BPM = 60;
   const beatValue = 60 / BPM * 1000;
   const bar = beatValue * length;
   const tick = bar / 127;
-
   let pos = 0;
   let i = 0;
-  let currentBeat = 0;
+  let way = 1;
+  let hasBounced = false;
   const timeLimitedCallback = () => {
-    if (pos >= bar) {
-      clearInterval(interval);
-      return;
+    if (pos >= bar || (hasBounced && Math.floor(pos) <= 0)) {
+      if (!loop) {
+        clearInterval(interval);
+        return;
+      } else {
+        if (loop === 'restart') {
+          pos = -tick;
+          i = -1;
+        } else if (loop === 'bounce') {
+          hasBounced = true;
+          way *= -1;
+        }
+      }
     }
-    if (Math.abs(pos) >= currentBeat + beatValue) {
-      currentBeat = currentBeat + beatValue;
-    }
-    pos += tick;
-    i++;
+    pos += tick * way;
+    i += way;
     callback(i);
   };
   const interval = setInterval(timeLimitedCallback, tick);
   timeLimitedCallback();
-  return () => console.log('detaching callback') || clearInterval(interval);
+  return () => clearInterval(interval);
 };
 
 //////////////
@@ -139,7 +147,7 @@ const MIDIHandler = () => {
       const handleNoteOnNoteOff = ({ note, type }) => {
         if (type === 'noteon') {
           const cancelCallbackOnTick = callbackOnTick(i => {
-            const { CC, instrument, channels, MIDIValues } = store.getState().app.curveEditors[0];
+            const { CC, instrument, channels, MIDIValues } = store.getState().app.curveEditors[0]; // TMP, replace 0
             const outputValue = MIDIValues[i];
             const output = IACDriverBuses[parseInt(instrument, 10) - 1];
             const outputCC = parseInt(CC, 10);
@@ -151,8 +159,8 @@ const MIDIHandler = () => {
           playingNotes[note.number] = null;
         }
       };
-      controllers[0].addListener('noteon', 'all', handleNoteOnNoteOff);
-      controllers[0].addListener('noteoff', 'all', handleNoteOnNoteOff);
+      controllers[1].addListener('noteon', 'all', handleNoteOnNoteOff); // TMP, replace 0
+      controllers[1].addListener('noteoff', 'all', handleNoteOnNoteOff); // TMP, replace 0
     };
 
     main();

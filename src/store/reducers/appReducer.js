@@ -17,7 +17,10 @@ const appReducer = (state = initialState, action) => {
         CC: 1,
         boundMin: 0,
         boundMax: 127,
+        rangeMin: 0,
+        rangeMax: 127,
         duration: null,
+        loop: false,
         MIDIValues: [],
       }));
       return { ...state, curveEditors };

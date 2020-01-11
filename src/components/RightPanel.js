@@ -22,8 +22,18 @@ const RightPanel = ({ selectedEditorId }) => {
     });
   };
 
-  const useSignUpForm = (callback, selectedEditor = {}) => {
-    const [inputs, setInputs] = useState({ instrument: 1, channels: '1', CC: 1, boundMin: 0, boundMax: 127 });
+  const useSignUpForm = callback => {
+    const [inputs, setInputs] = useState({
+      instrument: 1,
+      channels: '1',
+      CC: 1,
+      boundMin: 0,
+      boundMax: 127,
+      rangeMin: 0,
+      rangeMax: 0,
+      duration: '',
+      loop: false,
+    });
     const handleSubmit = event => {
       event.preventDefault();
       callback();
@@ -67,16 +77,82 @@ const RightPanel = ({ selectedEditorId }) => {
             </div>
             <div className="right-panel-control">
               <label>CC</label>
-              <input type="number" name="CC" value={inputs.CC} min={0} max={127} onChange={handleInputChange} />
+              <input
+                type="number"
+                name="CC"
+                value={inputs.CC}
+                min={0}
+                max={127}
+                onChange={handleInputChange}
+              />
+            </div>
+            <h3>Note triggered ?</h3>
+            <div className="right-panel-control">
+              <label>Duration</label>
+              <input
+                type="number"
+                name="duration"
+                value={inputs.duration}
+                min={0}
+                max={127}
+                onChange={handleInputChange}
+              />
+            </div>
+            <div className="right-panel-control">
+              <label>Loop</label>
+              <select
+                name="loop"
+                value={inputs.loop}
+                onChange={handleInputChange}
+              >
+                <option value="">false</option>
+                <option value="restart">restart</option>
+                <option value="bounce">bounce</option>
+              </select>
             </div>
             <h3>Triggers</h3>
             <div className="right-panel-control">
-              <label>Boundaries</label>
-              <input type="number" name="boundMin" value={inputs.boundMin} min={0} max={127} onChange={handleInputChange} />
-              <input type="number" name="boundMax" value={inputs.boundMax} min={0} max={127} onChange={handleInputChange} />
+              <label>Velocity boundaries</label>
+              <input
+                type="number"
+                name="boundMin"
+                value={inputs.boundMin}
+                min={0}
+                max={127}
+                onChange={handleInputChange}
+              />
+              <input
+                type="number"
+                name="boundMax"
+                value={inputs.boundMax}
+                min={0}
+                max={127}
+                onChange={handleInputChange}
+              />
             </div>
-            <br/>
-            <button type="submit" onClick={unselectEditor}>Close</button>
+            <div className="right-panel-control">
+              <label>Notes range</label>
+              <input
+                type="number"
+                name="rangeMin"
+                value={inputs.boundMin}
+                min={0}
+                max={127}
+                onChange={handleInputChange}
+              />
+              <input
+                type="number"
+                name="rangeMax"
+                value={inputs.boundMax}
+                min={0}
+                max={127}
+                onChange={handleInputChange}
+              />
+            </div>
+            <br />
+            <button type="submit" onClick={unselectEditor}>
+              Close
+            </button>
           </form>
         )}
       </div>

@@ -93,7 +93,8 @@ const computeCCAndSendToIACDriverBuses = (cursor, editor, IACDriverBuses) => {
   const outputValue = MIDIValues[cursor];
   const output = IACDriverBuses[parseInt(instrument, 10) - 1];
   const outputCC = parseInt(CC, 10);
-  output.sendControlChange(outputCC, outputValue, channels.split(','));
+  console.log(output, outputValue);
+  output.sendControlChange(outputCC, outputValue, channels.toString().split(','));
 };
 
 //////////////
@@ -154,7 +155,7 @@ const MIDIHandler = () => {
       // on CC1, ch1, from one of the controller
       // compute the CC value for every editor which is fader triggered and send it to IAC Driver Buses
       // the one-fader controls the position of the cursor in the curve
-      const onControlChange = (controller, editors) => {
+      const bindControlChange = (controller, editors) => {
         controller.addListener('controlchange', 'all', ({ data }) => {
           const [, inputCC, inputValue] = data;
           if (controller.getCcNameByNumber(inputCC) === 'modulationwheelcoarse') {
@@ -162,7 +163,7 @@ const MIDIHandler = () => {
           }
         });
       };
-      ONE_FADER_ENABLED && controllers.forEach(controller => onControlChange(controller, editors));
+      ONE_FADER_ENABLED && controllers.forEach(controller => bindControlChange(controller, editors));
 
       // 2] Note triggered CCs
       // for every editor which is note triggered, on note-on/note-off messages
@@ -178,7 +179,7 @@ const MIDIHandler = () => {
           if (duration) {
             const playingNotes = Array(127).fill(null);
             const handleNoteOnNoteOff = ({ note, type }) => {
-              if (type === 'noteon') {
+              if (type === 'noteon' && !playingNotes[note.number]) {
                 const callbackOnTick = setCallbackOnTick({ BPM: 60, duration, loop });
                 const cancelCallbackOnTick = callbackOnTick(cursor =>
                   computeCCAndSendToIACDriverBuses(cursor, editor, IACDriverBuses),

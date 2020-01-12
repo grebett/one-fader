@@ -56,9 +56,7 @@ const getControllers = controllers => {
 // duration => in beat (eg. in a 4/4 signature, 4 gives a full-bar length, 1/4 a quarter, etc.)
 // BPM => beats per minute ; set globally or per editor
 // TODO: improve perfs and get rid of the if forest
-const setCallbackOnTick = (
-  { BPM, duration, loop } = { BPM: 60, duration: 4, loop: false },
-) => callback => {
+const setCallbackOnTick = ({ BPM, duration, loop } = { BPM: 60, duration: 4, loop: false }) => callback => {
   const beatValue = (60 / BPM) * 1000;
   const bar = beatValue * duration;
   const tick = bar / 127;
@@ -174,26 +172,27 @@ const MIDIHandler = () => {
       // a) no more events are sent
       // b) the cursor start again from the begining and goes forward
       // c) the cursor goes backward, then when it reaches the beginning, goes forward again, and so on
-      NOTE_TRIGGERED_ENABLED && editors.forEach(editor => {
-        const { duration, loop } = editor;
-        if (duration) {
-          const playingNotes = Array(127).fill(null);
-          const handleNoteOnNoteOff = ({ note, type }) => {
-            if (type === 'noteon') {
-              const callbackOnTick = setCallbackOnTick({ BPM: 60, duration, loop });
-              const cancelCallbackOnTick = callbackOnTick(cursor =>
-                computeCCAndSendToIACDriverBuses(cursor, editor, IACDriverBuses),
-              );
-              playingNotes[note.number] = cancelCallbackOnTick;
-            } else {
-              playingNotes[note.number]();
-              playingNotes[note.number] = null;
-            }
-          };
-          controllers.forEach(controller => controller.addListener('noteon', 'all', handleNoteOnNoteOff));
-          controllers.forEach(controller => controller.addListener('noteoff', 'all', handleNoteOnNoteOff));
-        }
-      });
+      NOTE_TRIGGERED_ENABLED &&
+        editors.forEach(editor => {
+          const { duration, loop } = editor;
+          if (duration) {
+            const playingNotes = Array(127).fill(null);
+            const handleNoteOnNoteOff = ({ note, type }) => {
+              if (type === 'noteon') {
+                const callbackOnTick = setCallbackOnTick({ BPM: 60, duration, loop });
+                const cancelCallbackOnTick = callbackOnTick(cursor =>
+                  computeCCAndSendToIACDriverBuses(cursor, editor, IACDriverBuses),
+                );
+                playingNotes[note.number] = cancelCallbackOnTick;
+              } else {
+                playingNotes[note.number]();
+                playingNotes[note.number] = null;
+              }
+            };
+            controllers.forEach(controller => controller.addListener('noteon', 'all', handleNoteOnNoteOff));
+            controllers.forEach(controller => controller.addListener('noteoff', 'all', handleNoteOnNoteOff));
+          }
+        });
     };
 
     main();

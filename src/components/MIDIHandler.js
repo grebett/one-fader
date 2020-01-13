@@ -1,6 +1,12 @@
 import midi from 'webmidi';
 import config from '../config/config.json';
 
+//////////
+// TODO
+//////////
+// 1) So far we assume all IAC Driver Buses and Divisimate Ports are correctly orderded (1 <==> 1, 2 <==> 2, etc)
+//    We should check if this is true, or throw an error ; or we could rearrange the array ourself, but much more work
+
 //////////////////
 // FEATURE FLAGS
 //////////////////
@@ -135,6 +141,8 @@ const MIDIHandler = () => {
       controllers.forEach(controller => controller.removeListener('noteoff', 'all'));
       controllers.forEach(controller => controller.removeListener('noteon', 'all'));
       divisimatePorts.forEach(input => input.removeListener('midimessage', 'all'));
+      divisimatePorts.forEach(input => input.removeListener('noteon', 'all'));
+      divisimatePorts.forEach(input => input.removeListener('noteoff', 'all'));
 
       // 0] proxy all MIDI messages from Divisimate ports to according IAC Driver buses
       // Q? Should I proxy only the notes: for now, just ignore CC1
@@ -173,27 +181,39 @@ const MIDIHandler = () => {
       // a) no more events are sent
       // b) the cursor start again from the begining and goes forward
       // c) the cursor goes backward, then when it reaches the beginning, goes forward again, and so on
-      NOTE_TRIGGERED_ENABLED &&
-        editors.forEach(editor => {
-          const { duration, loop } = editor;
-          if (duration) {
-            const playingNotes = Array(127).fill(null);
-            const handleNoteOnNoteOff = ({ note, type }) => {
-              if (type === 'noteon' && !playingNotes[note.number]) {
-                const callbackOnTick = setCallbackOnTick({ BPM: 60, duration, loop });
-                const cancelCallbackOnTick = callbackOnTick(cursor =>
-                  computeCCAndSendToIACDriverBuses(cursor, editor, IACDriverBuses),
-                );
-                playingNotes[note.number] = cancelCallbackOnTick;
-              } else {
-                playingNotes[note.number]();
-                playingNotes[note.number] = null;
-              }
-            };
-            controllers.forEach(controller => controller.addListener('noteon', 'all', handleNoteOnNoteOff));
-            controllers.forEach(controller => controller.addListener('noteoff', 'all', handleNoteOnNoteOff));
-          }
+      const playingNotes = Array(127).fill(null);
+      const bindHandleNoteOnNoteOff = editor => ({ note, type }) => {
+        switch (type) {
+          case 'noteon':
+            if (!playingNotes[note.number]) {
+              const { duration, loop } = editor;
+              const callbackOnTick = setCallbackOnTick({ BPM: 60, duration, loop });
+              const cancelCallbackOnTick = callbackOnTick(cursor =>
+                computeCCAndSendToIACDriverBuses(cursor, editor, IACDriverBuses),
+              );
+              playingNotes[note.number] = cancelCallbackOnTick;
+            }
+            break;
+          case 'noteoff':
+            playingNotes[note.number]();
+            playingNotes[note.number] = null;
+            break;
+          default:
+            console.warn(`${type} isn't recognized. Are you sure you're using noteon or noteoff events?`);
+        }
+      };
+      NOTE_TRIGGERED_ENABLED && divisimatePorts.forEach((input, i) => {
+        const boundEditors = editors.filter(editor => {
+          const instrument = parseInt(editor.instrument, 10);
+          const isSameInstrument = instrument === i + 1;
+          return editor.duration && isSameInstrument;
         });
+        boundEditors.forEach(editor => {
+          const handleNoteOnNoteOff = bindHandleNoteOnNoteOff(editor);
+          input.addListener('noteon', 'all', handleNoteOnNoteOff);
+          input.addListener('noteoff', 'all', handleNoteOnNoteOff);
+        });
+      });
     };
 
     main();

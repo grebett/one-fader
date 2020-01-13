@@ -167,7 +167,7 @@ const MIDIHandler = () => {
         controller.addListener('controlchange', 'all', ({ data }) => {
           const [, inputCC, inputValue] = data;
           if (controller.getCcNameByNumber(inputCC) === 'modulationwheelcoarse') {
-            editors.forEach(editor => computeCCAndSendToIACDriverBuses(inputValue, editor, IACDriverBuses));
+            editors.forEach(editor => !editor.duration && computeCCAndSendToIACDriverBuses(inputValue, editor, IACDriverBuses));
           }
         });
       };

@@ -21,6 +21,7 @@ const appReducer = (state = initialState, action) => {
         rangeMax: 127,
         duration: '',
         loop: false,
+        noteEvent: 'noteon',
         MIDIValues: [],
       }));
       return { ...state, curveEditors };

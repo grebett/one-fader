@@ -37,6 +37,7 @@ const RightPanel = ({ selectedEditorId }) => {
         rangeMax: 0,
         duration: '',
         loop: false,
+        noteEvent: 'noteon',
       };
     });
 
@@ -109,6 +110,13 @@ const RightPanel = ({ selectedEditorId }) => {
                 max={127}
                 onChange={handleInputChange}
               />
+            </div>
+            <div className="right-panel-control">
+              <label>Note-on / note-off</label>
+              <select name="noteEvent" value={inputs.noteEvent} onChange={handleInputChange}>
+                <option value="noteon">note-on</option>
+                <option value="noteoff">note-off</option>
+              </select>
             </div>
             <div className="right-panel-control">
               <label>Loop</label>

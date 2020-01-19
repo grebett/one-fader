@@ -63,16 +63,16 @@ const getControllers = controllers => {
 // duration => in beat (eg. in a 4/4 signature, 4 gives a full-bar length, 1/4 a quarter, etc.)
 // BPM => beats per minute ; set globally or per editor
 // TODO: improve perfs and get rid of the if forest
-const setCallbackOnTick = ({ BPM, duration, loop } = { BPM: 60, duration: 4, loop: false }) => callback => {
-  const beatValue = (60 / BPM) * 1000;
-  const bar = beatValue * duration;
-  const tick = bar / 127;
+const durationtoMs = ({ BPM, duration } = { BPM: 60 }) => (60 / BPM) * 1000 * duration;
+
+const setCallbackOnTick = ({ durationMs, loop } = { loop: false }) => callback => {
+  const tick = durationMs / 127;
   let pos = 0;
   let i = 0;
   let way = 1;
   let hasBounced = false;
   const withLoopCallback = () => {
-    if (pos >= bar || (hasBounced && Math.floor(pos) <= 0)) {
+    if (pos >= durationMs || (hasBounced && Math.floor(pos) <= 0)) {
       if (!loop) {
         clearInterval(interval);
         return;
@@ -148,7 +148,10 @@ const MIDIHandler = () => {
       divisimatePorts.forEach(input => input.removeListener('noteoff', 'all'));
 
       // b) pre-sort editors to optimize computation when midi events occur
-      const fillArray = n => Array(n).fill(0).map(() => []);
+      const fillArray = n =>
+        Array(n)
+          .fill(0)
+          .map(() => []);
       const noteTriggeredEditors = {
         noteon: fillArray(32),
         noteoff: fillArray(32),
@@ -171,7 +174,10 @@ const MIDIHandler = () => {
         controller.addListener('controlchange', 'all', ({ data }) => {
           const [, inputCC, inputValue] = data;
           if (controller.getCcNameByNumber(inputCC) === 'modulationwheelcoarse') {
-            editors.forEach(editor => !editor.duration && computeCCAndSendToIACDriverBuses(inputValue, editor, IACDriverBuses));
+            editors.forEach(
+              editor =>
+                !editor.duration && computeCCAndSendToIACDriverBuses(inputValue, editor, IACDriverBuses),
+            );
           }
         });
       };
@@ -192,12 +198,15 @@ const MIDIHandler = () => {
         const noteOnTriggeredEditors = noteTriggeredEditors.noteon;
         if (type === 'noteon') {
           // stop note-off curves
-          noteOnCancelCallbacks[note.number].forEach(cb => cb()); // and force send noteoff
-          noteOnCancelCallbacks[note.number] = [];
+          noteOffCancelCallbacks[note.number].forEach(cb => cb()); // and force send noteoff
+          noteOffCancelCallbacks[note.number] = [];
           // start note-on curves
           noteOnTriggeredEditors[voice].forEach(editor => {
             const { duration, loop } = editor;
-            const callbackOnTick = setCallbackOnTick({ BPM: 60, duration, loop });
+            const callbackOnTick = setCallbackOnTick({
+              durationMs: durationtoMs({ BPM: 60, duration }),
+              loop,
+            });
             const cancelCallbackOnTick = callbackOnTick(cursor =>
               computeCCAndSendToIACDriverBuses(cursor, editor, IACDriverBuses),
             );
@@ -206,24 +215,30 @@ const MIDIHandler = () => {
           // send note on
           console.log('playing note', note, velocity);
           IACDriverBuses[voice].playNote(note.number, channel, { velocity });
-        }
-        else if (type === 'noteoff') {
+        } else if (type === 'noteoff') {
           // start note-off curves
           if (noteOffTriggeredEditors[voice].length) {
             let maxDuration = 0;
             noteOffTriggeredEditors[voice].forEach(editor => {
               const { duration, loop } = editor;
-              const callbackOnTick = setCallbackOnTick({ BPM: 60, duration, loop });
+              const durationMs = durationtoMs({ BPM: 60, duration });
+              const callbackOnTick = setCallbackOnTick({ durationMs, loop });
               const cancelCallbackOnTick = callbackOnTick(cursor =>
                 computeCCAndSendToIACDriverBuses(cursor, editor, IACDriverBuses),
               );
               noteOffTriggeredEditors[note.number].push(cancelCallbackOnTick);
-              if (duration > maxDuration) {
-                maxDuration = duration;
+              if (durationMs > maxDuration) {
+                maxDuration = durationMs;
               }
+              console.log(maxDuration);
             });
             // postpone note-off at the end of the longest curve
-            setTimeout(() => IACDriverBuses[voice].playNote(note.number, channel, { velocity }, maxDuration));
+            setTimeout(
+              () =>
+                console.log('sending noteoff') ||
+                IACDriverBuses[voice].playNote(note.number, channel, { velocity }),
+              maxDuration,
+            );
           } else {
             // send note off
             console.log('playing note', note, velocity);

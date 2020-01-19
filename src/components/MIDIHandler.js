@@ -11,7 +11,6 @@ import config from '../config/config.json';
 // FEATURE FLAGS
 //////////////////
 
-const PROXY_ENABLED = false;
 const DEBUG = true;
 const ONE_FADER_ENABLED = true;
 const NOTE_TRIGGERED_ENABLED = true;
@@ -116,9 +115,10 @@ const MIDIHandler = () => {
       return;
     }
 
-    // 0] get all 32 inputs and 32 outputs
+    // 0] get all 32 inputs and 32 outputs and controllers
     const divisimatePorts = getDivisimatePorts(32);
     const IACDriverBuses = getIACDriverBuses(32);
+    const controllers = getControllers(config.controllers);
 
     // midi.inputs.forEach(input => console.log(input.name));
     // midi.outputs.forEach(output => console.log(output.name));
@@ -127,8 +127,7 @@ const MIDIHandler = () => {
     // One Fader to bring them all and in the music bind them
     // In the Land of MIDI where the CCs lie.
     const main = () => {
-      const controllers = getControllers(config.controllers);
-      const editors = store.getState().app.curveEditors;
+      const editors = store.getState().app.curveEditors; // updated with every change to the store
       if (!controllers.length) {
         throw new Error(
           'No input controller has been found. Please check if the one you want to use are properly set connected and listed in the config.json file.',
@@ -148,13 +147,13 @@ const MIDIHandler = () => {
       divisimatePorts.forEach(input => input.removeListener('noteoff', 'all'));
 
       // b) pre-sort editors to optimize computation when midi events occur
-      const fillArray = n =>
+      const twoDimensionalArray = n =>
         Array(n)
           .fill(0)
           .map(() => []);
       const noteTriggeredEditors = {
-        noteon: fillArray(32),
-        noteoff: fillArray(32),
+        noteon: twoDimensionalArray(32),
+        noteoff: twoDimensionalArray(32),
       };
       const faderTriggeredEditors = [];
       editors.forEach(editor => {
@@ -174,9 +173,8 @@ const MIDIHandler = () => {
         controller.addListener('controlchange', 'all', ({ data }) => {
           const [, inputCC, inputValue] = data;
           if (controller.getCcNameByNumber(inputCC) === 'modulationwheelcoarse') {
-            editors.forEach(
-              editor =>
-                !editor.duration && computeCCAndSendToIACDriverBuses(inputValue, editor, IACDriverBuses),
+            faderTriggeredEditors.forEach(editor =>
+              computeCCAndSendToIACDriverBuses(inputValue, editor, IACDriverBuses),
             );
           }
         });
@@ -191,31 +189,48 @@ const MIDIHandler = () => {
       // a) no more events are sent
       // b) the cursor start again from the begining and goes forward
       // c) the cursor goes backward, then when it reaches the beginning, goes forward again, and so on
-      const noteOnCancelCallbacks = fillArray(127);
-      const noteOffCancelCallbacks = fillArray(127);
-      const bindHandleNoteOnNoteOff = voice => ({ type, note, velocity, channel }) => {
+      const noteOnTickingCallbacksKillers = twoDimensionalArray(127);
+      const noteOffTickingCallbacksKillers = twoDimensionalArray(127);
+      const noteOffclearTimeouts = [];
+      const fn = (editor, note) => {
+        const { duration, loop } = editor;
+        const durationMs = durationtoMs({ BPM: 60, duration });
+        const callbackOnTick = setCallbackOnTick({ durationMs, loop });
+        const cancelCallbackOnTick = callbackOnTick(cursor =>
+          computeCCAndSendToIACDriverBuses(cursor, editor, IACDriverBuses),
+        );
+        noteOnTickingCallbacksKillers[note.number].push(cancelCallbackOnTick);
+      };
+      const createNoteonNoteoffHandlerForEachVoice = voice => ({ type, note, velocity, channel }) => {
         const noteOffTriggeredEditors = noteTriggeredEditors.noteoff;
         const noteOnTriggeredEditors = noteTriggeredEditors.noteon;
         if (type === 'noteon') {
-          // stop note-off curves
-          noteOffCancelCallbacks[note.number].forEach(cb => cb()); // and force send noteoff
-          noteOffCancelCallbacks[note.number] = [];
+          console.log('noteon has been called');
+          // send noteoff if some noteoff curve editor has postponed it and clear everything
+          if (noteOffclearTimeouts[note.number]) {
+            console.log('playing note', note, 0);
+            IACDriverBuses[voice].playNote(note.number, channel, { velocity: 0 });
+            noteOffclearTimeouts[note.number]();
+            noteOffclearTimeouts[note.number] = null;
+          }
+          // stop existing noteoff curves
+          noteOffTickingCallbacksKillers[note.number].forEach(cb => cb());
+          noteOffTickingCallbacksKillers[note.number] = [];
           // start note-on curves
           noteOnTriggeredEditors[voice].forEach(editor => {
             const { duration, loop } = editor;
-            const callbackOnTick = setCallbackOnTick({
-              durationMs: durationtoMs({ BPM: 60, duration }),
-              loop,
-            });
+            const durationMs = durationtoMs({ BPM: 60, duration });
+            const callbackOnTick = setCallbackOnTick({ durationMs, loop });
             const cancelCallbackOnTick = callbackOnTick(cursor =>
               computeCCAndSendToIACDriverBuses(cursor, editor, IACDriverBuses),
             );
-            noteOnCancelCallbacks[note.number].push(cancelCallbackOnTick);
+            noteOnTickingCallbacksKillers[note.number].push(cancelCallbackOnTick);
           });
           // send note on
           console.log('playing note', note, velocity);
           IACDriverBuses[voice].playNote(note.number, channel, { velocity });
         } else if (type === 'noteoff') {
+          console.log('noteoff has been called');
           // start note-off curves
           if (noteOffTriggeredEditors[voice].length) {
             let maxDuration = 0;
@@ -225,53 +240,35 @@ const MIDIHandler = () => {
               const callbackOnTick = setCallbackOnTick({ durationMs, loop });
               const cancelCallbackOnTick = callbackOnTick(cursor =>
                 computeCCAndSendToIACDriverBuses(cursor, editor, IACDriverBuses),
-              );
-              noteOffTriggeredEditors[note.number].push(cancelCallbackOnTick);
+              ); // ====> ⚠️DUPE
+              noteOffTickingCallbacksKillers[note.number].push(cancelCallbackOnTick);
               if (durationMs > maxDuration) {
                 maxDuration = durationMs;
               }
-              console.log(maxDuration);
             });
             // postpone note-off at the end of the longest curve
-            setTimeout(
-              () =>
-                console.log('sending noteoff') ||
-                IACDriverBuses[voice].playNote(note.number, channel, { velocity }),
-              maxDuration,
-            );
+            const timeout = setTimeout(() => {
+              console.log('not killed', 'playing note', note, 0);
+              IACDriverBuses[voice].playNote(note.number, channel, { velocity: 0 });
+            }, maxDuration);
+            noteOffclearTimeouts[note.number] = () => clearTimeout(timeout);
           } else {
             // send note off
             console.log('playing note', note, velocity);
             IACDriverBuses[voice].playNote(note.number, channel, { velocity });
             // stop note-on curves
-            noteOnCancelCallbacks[note.number].forEach(cb => cb());
-            noteOnCancelCallbacks[note.number] = [];
+            noteOnTickingCallbacksKillers[note.number].forEach(cb => cb());
+            noteOnTickingCallbacksKillers[note.number] = [];
           }
         }
-        // PROXY, never here so far
-        else {
-          IACDriverBuses[voice].playNote(note.number, channel, { velocity });
-          console.log('playing note', note, velocity);
-        }
-        // switch (type) {
-        //   case 'noteon':
-        //     }
-        //     break;
-        //   case 'noteoff':
-        //     playingNotes[note.number]();
-        //     playingNotes[note.number] = null;
-        //     break;
-        //   default:
-        //     console.warn(`${type} isn't recognized. Are you sure you're using noteon or noteoff events?`);
-        // }
       };
-      if (NOTE_TRIGGERED_ENABLED) {
+
+      NOTE_TRIGGERED_ENABLED &&
         divisimatePorts.forEach((input, i) => {
-          const handleNoteOnNoteOff = bindHandleNoteOnNoteOff(i);
+          const handleNoteOnNoteOff = createNoteonNoteoffHandlerForEachVoice(i);
           input.addListener('noteon', 'all', handleNoteOnNoteOff);
           input.addListener('noteoff', 'all', handleNoteOnNoteOff);
         });
-      }
     };
 
     main();

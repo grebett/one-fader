@@ -186,11 +186,15 @@ const MIDIHandler = () => {
       // b) the cursor start again from the begining and goes forward
       // c) the cursor goes backward, then when it reaches the beginning, goes forward again, and so on
       const noteOnCancelCallbacks = fillArray(127);
+      const noteOffCancelCallbacks = fillArray(127);
       const bindHandleNoteOnNoteOff = voice => ({ type, note, velocity, channel }) => {
         const noteOffTriggeredEditors = noteTriggeredEditors.noteoff;
         const noteOnTriggeredEditors = noteTriggeredEditors.noteon;
         if (type === 'noteon') {
-          // start curves
+          // stop note-off curves
+          noteOnCancelCallbacks[note.number].forEach(cb => cb()); // and force send noteoff
+          noteOnCancelCallbacks[note.number] = [];
+          // start note-on curves
           noteOnTriggeredEditors[voice].forEach(editor => {
             const { duration, loop } = editor;
             const callbackOnTick = setCallbackOnTick({ BPM: 60, duration, loop });
@@ -204,16 +208,30 @@ const MIDIHandler = () => {
           IACDriverBuses[voice].playNote(note.number, channel, { velocity });
         }
         else if (type === 'noteoff') {
-          console.log('noteoff event');
+          // start note-off curves
           if (noteOffTriggeredEditors[voice].length) {
-            console.log('doing something on note-off event');
+            let maxDuration = 0;
+            noteOffTriggeredEditors[voice].forEach(editor => {
+              const { duration, loop } = editor;
+              const callbackOnTick = setCallbackOnTick({ BPM: 60, duration, loop });
+              const cancelCallbackOnTick = callbackOnTick(cursor =>
+                computeCCAndSendToIACDriverBuses(cursor, editor, IACDriverBuses),
+              );
+              noteOffTriggeredEditors[note.number].push(cancelCallbackOnTick);
+              if (duration > maxDuration) {
+                maxDuration = duration;
+              }
+            });
+            // postpone note-off at the end of the longest curve
+            setTimeout(() => IACDriverBuses[voice].playNote(note.number, channel, { velocity }, maxDuration));
+          } else {
+            // send note off
+            console.log('playing note', note, velocity);
+            IACDriverBuses[voice].playNote(note.number, channel, { velocity });
+            // stop note-on curves
+            noteOnCancelCallbacks[note.number].forEach(cb => cb());
+            noteOnCancelCallbacks[note.number] = [];
           }
-          // send note off
-          console.log('playing note', note, velocity);
-          IACDriverBuses[voice].playNote(note.number, channel, { velocity });
-          // stop curves
-          noteOnCancelCallbacks[note.number].forEach(cb => cb());
-          noteOnCancelCallbacks[note.number] = [];
         }
         // PROXY, never here so far
         else {

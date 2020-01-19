@@ -11,7 +11,8 @@ import config from '../config/config.json';
 // FEATURE FLAGS
 //////////////////
 
-const PROXY_ENABLED = true;
+const PROXY_ENABLED = false;
+const DEBUG = true;
 const ONE_FADER_ENABLED = true;
 const NOTE_TRIGGERED_ENABLED = true;
 
@@ -99,7 +100,7 @@ const computeCCAndSendToIACDriverBuses = (cursor, editor, IACDriverBuses) => {
   const outputValue = MIDIValues[cursor];
   const output = IACDriverBuses[parseInt(instrument, 10) - 1];
   const outputCC = parseInt(CC, 10);
-  console.log(output, outputValue);
+  DEBUG && console.log(output, outputValue);
   output.sendControlChange(outputCC, outputValue, channels.toString().split(','));
 };
 
@@ -118,6 +119,7 @@ const MIDIHandler = () => {
     // 0] get all 32 inputs and 32 outputs
     const divisimatePorts = getDivisimatePorts(32);
     const IACDriverBuses = getIACDriverBuses(32);
+
     // midi.inputs.forEach(input => console.log(input.name));
     // midi.outputs.forEach(output => console.log(output.name));
 
@@ -136,7 +138,8 @@ const MIDIHandler = () => {
         throw new Error('No editor has been found. Check the App component...');
       }
 
-      // -1] clean previously attached events
+      // 0] INIT
+      // a) clean previously attached events
       controllers.forEach(controller => controller.removeListener('controlchange', 'all'));
       controllers.forEach(controller => controller.removeListener('noteoff', 'all'));
       controllers.forEach(controller => controller.removeListener('noteon', 'all'));
@@ -144,20 +147,21 @@ const MIDIHandler = () => {
       divisimatePorts.forEach(input => input.removeListener('noteon', 'all'));
       divisimatePorts.forEach(input => input.removeListener('noteoff', 'all'));
 
-      // 0] proxy all MIDI messages from Divisimate ports to according IAC Driver buses
-      // Q? Should I proxy only the notes: for now, just ignore CC1
-      const proxyAllMIDIMessages = (inputs, outputs) => {
-        const formatMIDIOutMessage = data => [data[0], [data[1], data[2]]];
-        inputs.forEach((input, i) =>
-          input.addListener('midimessage', undefined, ({ data }) => {
-            if (data[0] === 176 && data[1] === 1) {
-              return;
-            }
-            outputs[i].send(...formatMIDIOutMessage(data));
-          }),
-        );
+      // b) pre-sort editors to optimize computation when midi events occur
+      const fillArray = n => Array(n).fill(0).map(() => []);
+      const noteTriggeredEditors = {
+        noteon: fillArray(32),
+        noteoff: fillArray(32),
       };
-      PROXY_ENABLED && proxyAllMIDIMessages(divisimatePorts, IACDriverBuses);
+      const faderTriggeredEditors = [];
+      editors.forEach(editor => {
+        if (!editor.duration) {
+          faderTriggeredEditors.push(editor);
+          return;
+        }
+        const i = parseInt(editor.instrument, 10) - 1;
+        noteTriggeredEditors[editor.noteEvent][i].push(editor);
+      });
 
       // 1] One-Fader
       // on CC1, ch1, from one of the controller
@@ -181,39 +185,60 @@ const MIDIHandler = () => {
       // a) no more events are sent
       // b) the cursor start again from the begining and goes forward
       // c) the cursor goes backward, then when it reaches the beginning, goes forward again, and so on
-      const playingNotes = Array(127).fill(null);
-      const bindHandleNoteOnNoteOff = editor => ({ note, type }) => {
-        switch (type) {
-          case 'noteon':
-            if (!playingNotes[note.number]) {
-              const { duration, loop } = editor;
-              const callbackOnTick = setCallbackOnTick({ BPM: 60, duration, loop });
-              const cancelCallbackOnTick = callbackOnTick(cursor =>
-                computeCCAndSendToIACDriverBuses(cursor, editor, IACDriverBuses),
-              );
-              playingNotes[note.number] = cancelCallbackOnTick;
-            }
-            break;
-          case 'noteoff':
-            playingNotes[note.number]();
-            playingNotes[note.number] = null;
-            break;
-          default:
-            console.warn(`${type} isn't recognized. Are you sure you're using noteon or noteoff events?`);
+      const noteOnCancelCallbacks = fillArray(127);
+      const bindHandleNoteOnNoteOff = voice => ({ type, note, velocity, channel }) => {
+        const noteOffTriggeredEditors = noteTriggeredEditors.noteoff;
+        const noteOnTriggeredEditors = noteTriggeredEditors.noteon;
+        if (type === 'noteon') {
+          // start curves
+          noteOnTriggeredEditors[voice].forEach(editor => {
+            const { duration, loop } = editor;
+            const callbackOnTick = setCallbackOnTick({ BPM: 60, duration, loop });
+            const cancelCallbackOnTick = callbackOnTick(cursor =>
+              computeCCAndSendToIACDriverBuses(cursor, editor, IACDriverBuses),
+            );
+            noteOnCancelCallbacks[note.number].push(cancelCallbackOnTick);
+          });
+          // send note on
+          console.log('playing note', note, velocity);
+          IACDriverBuses[voice].playNote(note.number, channel, { velocity });
         }
+        else if (type === 'noteoff') {
+          console.log('noteoff event');
+          if (noteOffTriggeredEditors[voice].length) {
+            console.log('doing something on note-off event');
+          }
+          // send note off
+          console.log('playing note', note, velocity);
+          IACDriverBuses[voice].playNote(note.number, channel, { velocity });
+          // stop curves
+          noteOnCancelCallbacks[note.number].forEach(cb => cb());
+          noteOnCancelCallbacks[note.number] = [];
+        }
+        // PROXY, never here so far
+        else {
+          IACDriverBuses[voice].playNote(note.number, channel, { velocity });
+          console.log('playing note', note, velocity);
+        }
+        // switch (type) {
+        //   case 'noteon':
+        //     }
+        //     break;
+        //   case 'noteoff':
+        //     playingNotes[note.number]();
+        //     playingNotes[note.number] = null;
+        //     break;
+        //   default:
+        //     console.warn(`${type} isn't recognized. Are you sure you're using noteon or noteoff events?`);
+        // }
       };
-      NOTE_TRIGGERED_ENABLED && divisimatePorts.forEach((input, i) => {
-        const boundEditors = editors.filter(editor => {
-          const instrument = parseInt(editor.instrument, 10);
-          const isSameInstrument = instrument === i + 1;
-          return editor.duration && isSameInstrument;
-        });
-        boundEditors.forEach(editor => {
-          const handleNoteOnNoteOff = bindHandleNoteOnNoteOff(editor);
+      if (NOTE_TRIGGERED_ENABLED) {
+        divisimatePorts.forEach((input, i) => {
+          const handleNoteOnNoteOff = bindHandleNoteOnNoteOff(i);
           input.addListener('noteon', 'all', handleNoteOnNoteOff);
           input.addListener('noteoff', 'all', handleNoteOnNoteOff);
         });
-      });
+      }
     };
 
     main();

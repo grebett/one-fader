@@ -64,13 +64,14 @@ const getControllers = controllers => {
 // TODO: improve perfs and get rid of the if forest
 const durationtoMs = ({ BPM, duration } = { BPM: 60 }) => (60 / BPM) * 1000 * duration;
 
-const setCallbackOnTick = ({ durationMs, loop } = { loop: false }) => callback => {
+const setCallbackOnTick = ({ durationMs, loop } = { loop: false }, callback) => {
   const tick = durationMs / 127;
   let pos = 0;
   let i = 0;
   let way = 1;
   let hasBounced = false;
-  const withLoopCallback = () => {
+  let interval = null;
+  const callbackOnTick = () => {
     if (pos >= durationMs || (hasBounced && Math.floor(pos) <= 0)) {
       if (!loop) {
         clearInterval(interval);
@@ -89,8 +90,8 @@ const setCallbackOnTick = ({ durationMs, loop } = { loop: false }) => callback =
     i += way;
     callback(i);
   };
-  const interval = setInterval(withLoopCallback, tick);
-  withLoopCallback();
+  interval = setInterval(callbackOnTick, tick);
+  callbackOnTick();
   return () => clearInterval(interval);
 };
 
@@ -99,9 +100,14 @@ const computeCCAndSendToIACDriverBuses = (cursor, editor, IACDriverBuses) => {
   const outputValue = MIDIValues[cursor];
   const output = IACDriverBuses[parseInt(instrument, 10) - 1];
   const outputCC = parseInt(CC, 10);
-  DEBUG && console.log(output, outputValue);
+  DEBUG && console.log('➡️', output.name, outputValue);
   output.sendControlChange(outputCC, outputValue, channels.toString().split(','));
 };
+
+const twoDimensionalArray = n =>
+  Array(n)
+    .fill(0)
+    .map(() => []);
 
 //////////////
 // Component
@@ -111,14 +117,17 @@ const MIDIHandler = () => {
 
   midi.enable(err => {
     if (err) {
-      console.log('WebMidi could not be enabled.', err);
-      return;
+      throw new Error('WebMidi could not be enabled.', err);
     }
 
-    // 0] get all 32 inputs and 32 outputs and controllers
+    // 0a] get all 32 inputs and 32 outputs and controllers
     const divisimatePorts = getDivisimatePorts(32);
     const IACDriverBuses = getIACDriverBuses(32);
     const controllers = getControllers(config.controllers);
+    // 0b] keep a reference of all ticking callbacks killer functions (roughly cancelInterval functions)
+    const noteOnTickingCallbacksKillers = twoDimensionalArray(127);
+    const noteOffTickingCallbacksKillers = twoDimensionalArray(127);
+    let noteOffclearTimeouts = [];
 
     // midi.inputs.forEach(input => console.log(input.name));
     // midi.outputs.forEach(output => console.log(output.name));
@@ -137,20 +146,24 @@ const MIDIHandler = () => {
         throw new Error('No editor has been found. Check the App component...');
       }
 
-      // 0] INIT
-      // a) clean previously attached events
+      // 0] INIT (we want to start fresh after a param has been changed in the editors GUI)
+      // a) clean previously attached events and kill all ticking callbacks
       controllers.forEach(controller => controller.removeListener('controlchange', 'all'));
-      controllers.forEach(controller => controller.removeListener('noteoff', 'all'));
-      controllers.forEach(controller => controller.removeListener('noteon', 'all'));
-      divisimatePorts.forEach(input => input.removeListener('midimessage', 'all'));
       divisimatePorts.forEach(input => input.removeListener('noteon', 'all'));
       divisimatePorts.forEach(input => input.removeListener('noteoff', 'all'));
+      // for (let i = 0; i < 127; i++) {
+      //   noteOnTickingCallbacksKillers[i].forEach(cb => cb());
+      //   noteOffTickingCallbacksKillers[i].forEach(cb => cb());
+      // }
+      // noteOffclearTimeouts.forEach((clearTimeoutFunction, noteNumber) => {
+      //   if (clearTimeoutFunction) {
+      //     clearTimeoutFunction();
+      //     IACDriverBuses.forEach(output => output.playNote(noteNumber, 'all', { velocity: 0 }));
+      //   }
+      // });
+      // noteOffclearTimeouts = [];
 
       // b) pre-sort editors to optimize computation when midi events occur
-      const twoDimensionalArray = n =>
-        Array(n)
-          .fill(0)
-          .map(() => []);
       const noteTriggeredEditors = {
         noteon: twoDimensionalArray(32),
         noteoff: twoDimensionalArray(32),
@@ -173,43 +186,30 @@ const MIDIHandler = () => {
         controller.addListener('controlchange', 'all', ({ data }) => {
           const [, inputCC, inputValue] = data;
           if (controller.getCcNameByNumber(inputCC) === 'modulationwheelcoarse') {
-            faderTriggeredEditors.forEach(editor =>
-              computeCCAndSendToIACDriverBuses(inputValue, editor, IACDriverBuses),
-            );
+            editors.forEach(editor => computeCCAndSendToIACDriverBuses(inputValue, editor, IACDriverBuses));
           }
         });
       };
-      ONE_FADER_ENABLED && controllers.forEach(controller => bindControlChange(controller, editors));
+      ONE_FADER_ENABLED &&
+        controllers.forEach(controller => bindControlChange(controller, faderTriggeredEditors));
 
       // 2] Note triggered CCs
-      // for every editor which is note triggered, on note-on/note-off messages
-      // compute the CC value and send it to IAC Driver Buses
-      // the position of the cursor is updated every tick (tempo synced duration / 127)
-      // until the note-off event occurs, three behaviors are possible when the end of the curve is rech
-      // a) no more events are sent
-      // b) the cursor start again from the begining and goes forward
-      // c) the cursor goes backward, then when it reaches the beginning, goes forward again, and so on
-      const noteOnTickingCallbacksKillers = twoDimensionalArray(127);
-      const noteOffTickingCallbacksKillers = twoDimensionalArray(127);
-      const noteOffclearTimeouts = [];
-      const startTickingCallback = (editor, note, callbacksKillers) => {
+      const startTickingCallback = (editor, note, callbacksKillersArray) => {
         const { duration, loop } = editor;
         const durationMs = durationtoMs({ BPM: 60, duration });
-        const callbackOnTick = setCallbackOnTick({ durationMs, loop });
-        const cancelCallbackOnTick = callbackOnTick(cursor =>
+        const cancelCallbackOnTick = setCallbackOnTick({ durationMs, loop }, cursor =>
           computeCCAndSendToIACDriverBuses(cursor, editor, IACDriverBuses),
         );
-        callbacksKillers[note.number].push(cancelCallbackOnTick);
+        callbacksKillersArray[note.number].push(cancelCallbackOnTick);
         return durationMs;
       };
       const createNoteonNoteoffHandlerForEachVoice = voice => ({ type, note, velocity, channel }) => {
         const noteOffTriggeredEditors = noteTriggeredEditors.noteoff;
         const noteOnTriggeredEditors = noteTriggeredEditors.noteon;
         if (type === 'noteon') {
-          console.log('noteon has been called');
+          DEBUG && console.log('📀noteon has been called');
           // send noteoff if some noteoff curve editor has postponed it and clear everything
           if (noteOffclearTimeouts[note.number]) {
-            console.log('playing note', note, 0);
             IACDriverBuses[voice].playNote(note.number, channel, { velocity: 0 });
             noteOffclearTimeouts[note.number]();
             noteOffclearTimeouts[note.number] = null;
@@ -218,31 +218,39 @@ const MIDIHandler = () => {
           noteOffTickingCallbacksKillers[note.number].forEach(cb => cb());
           noteOffTickingCallbacksKillers[note.number] = [];
           // start note-on curves
-          noteOnTriggeredEditors[voice].forEach(editor => startTickingCallback(editor, note, noteOnTickingCallbacksKillers));
+          noteOnTriggeredEditors[voice].forEach(editor =>
+            startTickingCallback(editor, note, noteOnTickingCallbacksKillers),
+          );
           // send note on
-          console.log('playing note', note, velocity);
+          DEBUG && console.log('🎹playing noteon', IACDriverBuses[voice].name, note, velocity);
           IACDriverBuses[voice].playNote(note.number, channel, { velocity });
         } else if (type === 'noteoff') {
-          console.log('noteoff has been called');
+          DEBUG && console.log('📀noteoff has been called');
           // start note-off curves
           if (noteOffTriggeredEditors[voice].length) {
             let maxDuration = 0;
             noteOffTriggeredEditors[voice].forEach(editor => {
-              const durationMs = startTickingCallback(editor, voice, noteOnTickingCallbacksKillers);
+              const durationMs = startTickingCallback(editor, note, noteOnTickingCallbacksKillers);
               if (durationMs > maxDuration) {
                 maxDuration = durationMs;
               }
             });
             // postpone note-off at the end of the longest curve
             const timeout = setTimeout(() => {
-              console.log('not killed', 'playing note', note, 0);
+              DEBUG &&
+                console.log(
+                  `🎹playing noteoff after a timeout of ${maxDuration}`,
+                  IACDriverBuses[voice].name,
+                  note,
+                  0,
+                );
               IACDriverBuses[voice].playNote(note.number, channel, { velocity: 0 });
             }, maxDuration);
             noteOffclearTimeouts[note.number] = () => clearTimeout(timeout);
           } else {
             // send note off
-            console.log('playing note', note, velocity);
-            IACDriverBuses[voice].playNote(note.number, channel, { velocity });
+            DEBUG && console.log('🎹playing noteoff', IACDriverBuses[voice].name, note, 0); // interestingly, some controllers can send velocity values > than 0 on noteoff (release velocity)
+            IACDriverBuses[voice].playNote(note.number, channel, { velocity: 0 });
             // stop note-on curves
             noteOnTickingCallbacksKillers[note.number].forEach(cb => cb());
             noteOnTickingCallbacksKillers[note.number] = [];
@@ -251,8 +259,8 @@ const MIDIHandler = () => {
       };
 
       NOTE_TRIGGERED_ENABLED &&
-        divisimatePorts.forEach((input, i) => {
-          const handleNoteOnNoteOff = createNoteonNoteoffHandlerForEachVoice(i);
+        divisimatePorts.forEach((input, voice) => {
+          const handleNoteOnNoteOff = createNoteonNoteoffHandlerForEachVoice(voice);
           input.addListener('noteon', 'all', handleNoteOnNoteOff);
           input.addListener('noteoff', 'all', handleNoteOnNoteOff);
         });

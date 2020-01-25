@@ -8,9 +8,7 @@ const RightPanel = ({ selectedEditorId }) => {
   const findEditor = editors => editors.find(editor => editor.id === selectedEditorId);
   const selectedEditor = useSelector(state => findEditor(state.app.curveEditors));
 
-  const unselectEditor = () => {
-    dispatch({ type: 'UNSELECT_CURVE_EDITOR', payload: { id: selectedEditorId } });
-    selectedEditor.widget.minimize();
+  const computeMIDIValues = () => {
     const MIDIValues = [];
     for (let i = 0; i < 1; i += 1 / 127) {
       MIDIValues.push(selectedEditor.widget.getMIDIValue()(i));
@@ -19,6 +17,12 @@ const RightPanel = ({ selectedEditorId }) => {
       type: 'UPDATE_CURVE_EDITOR_PARAMETERS',
       payload: { id: selectedEditorId, parameters: { MIDIValues } },
     });
+  };
+
+  const unselectEditor = () => {
+    dispatch({ type: 'UNSELECT_CURVE_EDITOR', payload: { id: selectedEditorId } });
+    selectedEditor.widget.minimize();
+    computeMIDIValues();
   };
 
   const useSignUpForm = callback => {

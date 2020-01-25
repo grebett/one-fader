@@ -45,6 +45,15 @@ const MIDICurveEditor = ({ name, layout, isSelected, selectedEditorId }) => {
 
   const clickHandler = () => {
     widget.forceSaveState();
+    const MIDIValues = [];
+    for (let i = 0; i < 1; i += 1 / 127) {
+      MIDIValues.push(widget.getMIDIValue()(i));
+    }
+    dispatch({
+      type: 'UPDATE_CURVE_EDITOR_PARAMETERS',
+      payload: { id: name, parameters: { MIDIValues } },
+    });
+    innerMIDIValues.current = MIDIValues;
   };
 
   const showValues = () => {

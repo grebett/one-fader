@@ -12,7 +12,7 @@ const appReducer = (state = initialState, action) => {
       const { ids } = action.payload;
       const curveEditors = ids.map(id => ({
         id,
-        instrument: 1,
+        instrument: 0,
         channels: 1,
         CC: 1,
         boundMin: 0,

@@ -18,6 +18,16 @@ const NOTE_TRIGGERED_ENABLED = true;
 //////////
 // UTILS
 //////////
+const range = (s, e) => {
+  const start = parseInt(s, 10);
+  const end = parseInt(e, 10);
+  if (start > end || isNaN(start) || isNaN(end) || end > 16) {
+    console.warn(`Error: the given range value (${start}-${end}) isn't correct. An empty array is then returned.`)
+    return [];
+  }
+  return Array(end - start + 1).fill().map((_, i) => parseInt(start, 10) + i);
+};
+
 const getDivisimatePorts = n => {
   const padding = n => (n < 10 ? `0${n}` : n);
   return Array(n)
@@ -95,13 +105,33 @@ const setCallbackOnTick = ({ durationMs, loop } = { loop: false }, callback) => 
   return () => clearInterval(interval);
 };
 
+
 const computeCCAndSendToIACDriverBuses = (cursor, editor, IACDriverBuses) => {
-  const { CC, instrument, channels, MIDIValues } = editor;
+  const { CC, instrument, MIDIValues } = editor;
+  // 1) parse channels
+  const editorChannels = editor.channels.toString();
+  const isRange = entry => entry.indexOf('-') !== -1;
+  const isList = entry => entry.indexOf(',') !== -1;
+  let channels = isNaN(editorChannels) ? 'all' : editorChannels;
+  if (isRange(editorChannels)) {
+    const [start, end] = editorChannels.split('-');
+    channels = range(start, end);
+  } else if (isList(editorChannels)) {
+    channels = editorChannels.split(',');
+  }
+  // 2) fetch value and send it to IAC Driver Bus
   const outputValue = MIDIValues[cursor];
-  const output = IACDriverBuses[parseInt(instrument, 10) - 1];
+  const voice = parseInt(instrument, 10) - 1;
+  const output = IACDriverBuses[voice];
   const outputCC = parseInt(CC, 10);
-  DEBUG && console.log('➡️', output.name, outputValue);
-  output.sendControlChange(outputCC, outputValue, channels.toString().split(','));
+  if (output) {
+    DEBUG && console.log('➡️', output.name, outputValue);
+    output.sendControlChange(outputCC, outputValue, channels);
+  } else {
+    if (voice !== -1) {
+      console.warn(`IAC Driver Bus ${voice + 1} doesn't exist. Have you entered a value > 32 ?`);
+    }
+  }
 };
 
 const twoDimensionalArray = n =>

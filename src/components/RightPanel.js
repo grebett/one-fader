@@ -32,7 +32,7 @@ const RightPanel = ({ selectedEditorId }) => {
         return editor;
       }
       return {
-        instrument: 1,
+        instrument: 0,
         channels: '1',
         CC: 1,
         boundMin: 0,
@@ -79,11 +79,14 @@ const RightPanel = ({ selectedEditorId }) => {
           <form className="right-panel-controls" onSubmit={handleSubmit}>
             <h3>Sends</h3>
             <div className="right-panel-control">
-              <label>Instrument</label>
+              <label>
+                Instrument <span style={{ fontSize: '0.5em' }}>(0 = disabled)</span>
+              </label>
               <input
                 type="number"
                 name="instrument"
-                min={1}
+                min={0}
+                max={32}
                 value={inputs.instrument}
                 onChange={handleInputChange}
               />

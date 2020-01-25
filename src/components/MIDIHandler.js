@@ -148,20 +148,21 @@ const MIDIHandler = () => {
 
       // 0] INIT (we want to start fresh after a param has been changed in the editors GUI)
       // a) clean previously attached events and kill all ticking callbacks
+      DEBUG && console.log('🧹starting cleaning everything');
       controllers.forEach(controller => controller.removeListener('controlchange', 'all'));
       divisimatePorts.forEach(input => input.removeListener('noteon', 'all'));
       divisimatePorts.forEach(input => input.removeListener('noteoff', 'all'));
-      // for (let i = 0; i < 127; i++) {
-      //   noteOnTickingCallbacksKillers[i].forEach(cb => cb());
-      //   noteOffTickingCallbacksKillers[i].forEach(cb => cb());
-      // }
-      // noteOffclearTimeouts.forEach((clearTimeoutFunction, noteNumber) => {
-      //   if (clearTimeoutFunction) {
-      //     clearTimeoutFunction();
-      //     IACDriverBuses.forEach(output => output.playNote(noteNumber, 'all', { velocity: 0 }));
-      //   }
-      // });
-      // noteOffclearTimeouts = [];
+      for (let i = 0; i < 127; i++) {
+        noteOnTickingCallbacksKillers[i].forEach(cb => cb());
+        noteOffTickingCallbacksKillers[i].forEach(cb => cb());
+      }
+      noteOffclearTimeouts.forEach((clearTimeoutFunction, noteNumber) => {
+        if (clearTimeoutFunction) {
+          clearTimeoutFunction();
+          IACDriverBuses.forEach(output => output.playNote(noteNumber, 'all', { velocity: 0 }));
+        }
+      });
+      noteOffclearTimeouts = [];
 
       // b) pre-sort editors to optimize computation when midi events occur
       const noteTriggeredEditors = {
@@ -210,13 +211,18 @@ const MIDIHandler = () => {
           DEBUG && console.log('📀noteon has been called');
           // send noteoff if some noteoff curve editor has postponed it and clear everything
           if (noteOffclearTimeouts[note.number]) {
-            DEBUG && console.log('🎹playing noteoff because there was a pending noteoff', IACDriverBuses[voice].name, note, velocity);
+            DEBUG &&
+              console.log(
+                '🎹playing noteoff because there was a pending noteoff',
+                IACDriverBuses[voice].name,
+                note,
+                velocity,
+              );
             IACDriverBuses[voice].playNote(note.number, channel, { velocity: 0 });
             noteOffclearTimeouts[note.number]();
             noteOffclearTimeouts[note.number] = null;
           }
           // stop existing noteoff curves
-          console.log(noteOffTickingCallbacksKillers);
           noteOffTickingCallbacksKillers[note.number].forEach(cb => cb());
           noteOffTickingCallbacksKillers[note.number] = [];
           // start note-on curves

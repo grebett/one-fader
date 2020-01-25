@@ -192,14 +192,15 @@ const MIDIHandler = () => {
       const noteOnTickingCallbacksKillers = twoDimensionalArray(127);
       const noteOffTickingCallbacksKillers = twoDimensionalArray(127);
       const noteOffclearTimeouts = [];
-      const fn = (editor, note) => {
+      const startTickingCallback = (editor, note, callbacksKillers) => {
         const { duration, loop } = editor;
         const durationMs = durationtoMs({ BPM: 60, duration });
         const callbackOnTick = setCallbackOnTick({ durationMs, loop });
         const cancelCallbackOnTick = callbackOnTick(cursor =>
           computeCCAndSendToIACDriverBuses(cursor, editor, IACDriverBuses),
         );
-        noteOnTickingCallbacksKillers[note.number].push(cancelCallbackOnTick);
+        callbacksKillers[note.number].push(cancelCallbackOnTick);
+        return durationMs;
       };
       const createNoteonNoteoffHandlerForEachVoice = voice => ({ type, note, velocity, channel }) => {
         const noteOffTriggeredEditors = noteTriggeredEditors.noteoff;
@@ -217,15 +218,7 @@ const MIDIHandler = () => {
           noteOffTickingCallbacksKillers[note.number].forEach(cb => cb());
           noteOffTickingCallbacksKillers[note.number] = [];
           // start note-on curves
-          noteOnTriggeredEditors[voice].forEach(editor => {
-            const { duration, loop } = editor;
-            const durationMs = durationtoMs({ BPM: 60, duration });
-            const callbackOnTick = setCallbackOnTick({ durationMs, loop });
-            const cancelCallbackOnTick = callbackOnTick(cursor =>
-              computeCCAndSendToIACDriverBuses(cursor, editor, IACDriverBuses),
-            );
-            noteOnTickingCallbacksKillers[note.number].push(cancelCallbackOnTick);
-          });
+          noteOnTriggeredEditors[voice].forEach(editor => startTickingCallback(editor, note, noteOnTickingCallbacksKillers));
           // send note on
           console.log('playing note', note, velocity);
           IACDriverBuses[voice].playNote(note.number, channel, { velocity });
@@ -235,13 +228,7 @@ const MIDIHandler = () => {
           if (noteOffTriggeredEditors[voice].length) {
             let maxDuration = 0;
             noteOffTriggeredEditors[voice].forEach(editor => {
-              const { duration, loop } = editor;
-              const durationMs = durationtoMs({ BPM: 60, duration });
-              const callbackOnTick = setCallbackOnTick({ durationMs, loop });
-              const cancelCallbackOnTick = callbackOnTick(cursor =>
-                computeCCAndSendToIACDriverBuses(cursor, editor, IACDriverBuses),
-              ); // ====> ⚠️DUPE
-              noteOffTickingCallbacksKillers[note.number].push(cancelCallbackOnTick);
+              const durationMs = startTickingCallback(editor, voice, noteOnTickingCallbacksKillers);
               if (durationMs > maxDuration) {
                 maxDuration = durationMs;
               }

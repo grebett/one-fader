@@ -210,11 +210,13 @@ const MIDIHandler = () => {
           DEBUG && console.log('📀noteon has been called');
           // send noteoff if some noteoff curve editor has postponed it and clear everything
           if (noteOffclearTimeouts[note.number]) {
+            DEBUG && console.log('🎹playing noteoff because there was a pending noteoff', IACDriverBuses[voice].name, note, velocity);
             IACDriverBuses[voice].playNote(note.number, channel, { velocity: 0 });
             noteOffclearTimeouts[note.number]();
             noteOffclearTimeouts[note.number] = null;
           }
           // stop existing noteoff curves
+          console.log(noteOffTickingCallbacksKillers);
           noteOffTickingCallbacksKillers[note.number].forEach(cb => cb());
           noteOffTickingCallbacksKillers[note.number] = [];
           // start note-on curves
@@ -230,7 +232,7 @@ const MIDIHandler = () => {
           if (noteOffTriggeredEditors[voice].length) {
             let maxDuration = 0;
             noteOffTriggeredEditors[voice].forEach(editor => {
-              const durationMs = startTickingCallback(editor, note, noteOnTickingCallbacksKillers);
+              const durationMs = startTickingCallback(editor, note, noteOffTickingCallbacksKillers);
               if (durationMs > maxDuration) {
                 maxDuration = durationMs;
               }

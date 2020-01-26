@@ -12,6 +12,8 @@ const appReducer = (state = initialState, action) => {
       const { ids } = action.payload;
       const curveEditors = ids.map(id => ({
         id,
+        displayName: id,
+        about: '',
         instrument: 0,
         channels: 1,
         CC: 1,

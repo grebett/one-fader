@@ -10,6 +10,9 @@
 }
 
 .right-panel.container button {
+  position: absolute;
+  top: 25px;
+  right: 25px;
   background-color: #151218;
   color: white;
   padding: 5px 10px;
@@ -19,7 +22,7 @@
 }
 
 .right-panel-controls {
-  margin-top: 500px;
+  margin-top: 460px;
 }
 
 .right-panel-control {
@@ -31,11 +34,21 @@
 .right-panel-control label {
   display: inline-block;
   width: 145px;
+  vertical-align: top;
 }
 
 .right-panel-control input {
   width: 40px;
   height: 14px;
+  margin-right: 5px;
+  border: none;
+  border-radius: 2px;
+  font-size: 14px;
+  padding: 2px 5px;
+}
+
+.right-panel-control input[name="displayName"], textarea {
+  width: 200px;
   margin-right: 5px;
   border: none;
   border-radius: 2px;

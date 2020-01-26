@@ -14,7 +14,8 @@ const MainZone = ({ curveEditors, selectedEditorId }) => {
           <div key={`midi-curve-editor-wrapper-${i}`} className={className}>
             <MIDICurveEditor
               key={editor.id}
-              name={editor.id}
+              id={editor.id}
+              name={editor.displayName}
               layout="minimized"
               isSelected={isSelected}
               selectedEditorId={selectedEditorId}

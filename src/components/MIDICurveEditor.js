@@ -6,7 +6,7 @@ import { useDispatch } from 'react-redux';
 
 window.curves = [];
 
-const MIDICurveEditor = ({ name, layout, isSelected, selectedEditorId }) => {
+const MIDICurveEditor = ({ id, name, layout, isSelected, selectedEditorId }) => {
   const widgetContainerRef = useRef(null);
   const [widget, saveWidget] = useState(null);
   const dispatch = useDispatch();
@@ -14,13 +14,13 @@ const MIDICurveEditor = ({ name, layout, isSelected, selectedEditorId }) => {
 
   useEffect(() => {
     // 1) create widget
-    const widget = new MojsCurveEditor({ name }, widgetContainerRef.current);
+    const widget = new MojsCurveEditor({ id }, widgetContainerRef.current);
     widget.minimize();
     saveWidget(widget);
-    dispatch({ type: 'ATTACH_WIDGET_TO_EDITOR', payload: { id: name, widget } });
+    dispatch({ type: 'ATTACH_WIDGET_TO_EDITOR', payload: { id, widget } });
 
     // 2) get its MIDI values
-  }, [name, layout, dispatch]);
+  }, [id, layout, dispatch]);
 
   useEffect(() => {
     if (widget) {
@@ -30,15 +30,15 @@ const MIDICurveEditor = ({ name, layout, isSelected, selectedEditorId }) => {
       }
       dispatch({
         type: 'UPDATE_CURVE_EDITOR_PARAMETERS',
-        payload: { id: name, parameters: { MIDIValues } },
+        payload: { id, parameters: { MIDIValues } },
       });
       innerMIDIValues.current = MIDIValues;
     }
-  }, [dispatch, name, widget]);
+  }, [dispatch, id, widget]);
 
   const doubleClickHandler = () => {
     if (!selectedEditorId) {
-      dispatch({ type: 'SELECT_CURVE_EDITOR', payload: { id: name } });
+      dispatch({ type: 'SELECT_CURVE_EDITOR', payload: { id } });
       widget.maximize();
     }
   };
@@ -51,7 +51,7 @@ const MIDICurveEditor = ({ name, layout, isSelected, selectedEditorId }) => {
     }
     dispatch({
       type: 'UPDATE_CURVE_EDITOR_PARAMETERS',
-      payload: { id: name, parameters: { MIDIValues } },
+      payload: { id, parameters: { MIDIValues } },
     });
     innerMIDIValues.current = MIDIValues;
   };
@@ -72,9 +72,10 @@ const MIDICurveEditor = ({ name, layout, isSelected, selectedEditorId }) => {
       ref={widgetContainerRef}
       onDoubleClick={doubleClickHandler}
       onClick={clickHandler}
+      title={name}
     >
       {widget && (
-        <div className={widgetNameClassName} onClick={showValues}>
+        <div className={widgetNameClassName} onClick={showValues} title={name}>
           {name}
         </div>
       )}

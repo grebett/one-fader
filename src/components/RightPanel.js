@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 
 import './RightPanel.css';
@@ -33,6 +33,8 @@ const RightPanel = ({ selectedEditorId }) => {
       }
       return {
         instrument: 0,
+        displayName: '',
+        about: '',
         channels: '1',
         CC: 1,
         boundMin: 0,
@@ -77,6 +79,14 @@ const RightPanel = ({ selectedEditorId }) => {
         <h1>RightPanel</h1>
         {selectedEditorId && (
           <form className="right-panel-controls" onSubmit={handleSubmit}>
+            <div className="right-panel-control">
+              <label>Name</label>
+              <input type="text" name="displayName" value={inputs.displayName} onChange={handleInputChange} />
+            </div>
+            <div className="right-panel-control">
+              <label>About</label>
+              <textarea name="about" onChange={handleInputChange} value={inputs.about}></textarea>
+            </div>
             <h3>Sends</h3>
             <div className="right-panel-control">
               <label>
@@ -178,7 +188,7 @@ const RightPanel = ({ selectedEditorId }) => {
             </div>
             <br />
             <button type="submit" onClick={unselectEditor}>
-              Close
+              ╳
             </button>
           </form>
         )}

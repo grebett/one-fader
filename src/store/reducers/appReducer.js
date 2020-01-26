@@ -29,6 +29,7 @@ const appReducer = (state = initialState, action) => {
         rangeMin: 0,
         rangeMax: 127,
         duration: '',
+        bpm: 60,
         loop: false,
         noteEvent: 'noteon',
         MIDIValues: [],

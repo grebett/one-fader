@@ -46,7 +46,7 @@ const MainZone = ({ curveEditors, selectedEditorId }) => {
           <fieldset>
             <legend>Actions</legend>
             <label htmlFor="upload">
-              <i class="fas fa-upload"></i> Load Editors
+              <i className="fas fa-upload"></i> Load Editors
             </label>
             <input
               type="file"

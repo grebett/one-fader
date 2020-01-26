@@ -227,8 +227,8 @@ const MIDIHandler = () => {
 
       // 2] Note triggered CCs
       const startTickingCallback = (editor, note, callbacksKillersArray) => {
-        const { duration, loop } = editor;
-        const durationMs = durationtoMs({ BPM: 60, duration });
+        const { duration, loop, bpm } = editor;
+        const durationMs = durationtoMs({ BPM: bpm, duration });
         const cancelCallbackOnTick = setCallbackOnTick({ durationMs, loop }, cursor =>
           computeCCAndSendToIACDriverBuses(cursor, editor, IACDriverBuses),
         );

@@ -42,6 +42,7 @@ const RightPanel = ({ selectedEditorId }) => {
         rangeMin: 0,
         rangeMax: 0,
         duration: '',
+        bpm: 60,
         loop: false,
         noteEvent: 'noteon',
       };
@@ -118,13 +119,21 @@ const RightPanel = ({ selectedEditorId }) => {
             </div>
             <h3>Note triggered ?</h3>
             <div className="right-panel-control">
-              <label>Duration</label>
+              <label>Duration / BPM</label>
               <input
                 type="number"
                 name="duration"
                 value={inputs.duration}
                 min={0}
                 max={127}
+                onChange={handleInputChange}
+              />
+              <input
+                type="number"
+                name="bpm"
+                value={inputs.bpm}
+                min={1}
+                max={300}
                 onChange={handleInputChange}
               />
             </div>

@@ -207,7 +207,7 @@ const MIDIHandler = () => {
           return;
         }
         const i = parseInt(editor.instrument, 10) - 1;
-        noteTriggeredEditors[editor.noteEvent][i].push(editor);
+        i > -1 && noteTriggeredEditors[editor.noteEvent][i].push(editor);
       });
 
       // 1] One-Fader

@@ -10,10 +10,21 @@ const createEditorsIds = n => Array(n).fill(0).map((_, i) => `editor-${i}`);
 
 const bindStoreToMIDIHandler = MIDIHandler();
 
+const sanitize = editors => editors.map(editor => ({
+  ...editor,
+  widget: null,
+}));
+
 const App = ({ store }) => {
   const dispatch = useDispatch();
   const curveEditors = useSelector(state => state.app.curveEditors);
   const selectedEditorId = useSelector(state => state.app.selectedEditor);
+
+  window.dump = () => {
+    const state = store.getState().app;
+    return JSON.stringify({...state, curveEditors: sanitize(state.curveEditors)});
+    // return JSON.stringify(store.getState());
+  };
 
   // init
   useEffect(() => {

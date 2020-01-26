@@ -14,7 +14,7 @@ const MIDICurveEditor = ({ id, name, layout, isSelected, selectedEditorId }) => 
 
   useEffect(() => {
     // 1) create widget
-    const widget = new MojsCurveEditor({ id }, widgetContainerRef.current);
+    const widget = new MojsCurveEditor({ name: id }, widgetContainerRef.current);
     widget.minimize();
     saveWidget(widget);
     dispatch({ type: 'ATTACH_WIDGET_TO_EDITOR', payload: { id, widget } });

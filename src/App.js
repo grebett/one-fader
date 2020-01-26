@@ -10,10 +10,22 @@ const createEditorsIds = n => Array(n).fill(0).map((_, i) => `editor-${i}`);
 
 const bindStoreToMIDIHandler = MIDIHandler();
 
-const sanitize = editors => editors.map(editor => ({
-  ...editor,
-  widget: null,
-}));
+const sanitize = editors => {
+  return editors.map(editor => {
+    delete editor.widget;
+    return editor;
+  });
+};
+
+const createTextFileAndDownload = (filename, text) => {
+  const element = document.createElement('a');
+  element.setAttribute('href', 'data:text/plain;charset=utf-8,' + encodeURIComponent(text));
+  element.setAttribute('download', filename);
+  element.style.display = 'none';
+  document.body.appendChild(element);
+  element.click();
+  document.body.removeChild(element);
+};
 
 const App = ({ store }) => {
   const dispatch = useDispatch();
@@ -22,8 +34,12 @@ const App = ({ store }) => {
 
   window.dump = () => {
     const state = store.getState().app;
-    return JSON.stringify({...state, curveEditors: sanitize(state.curveEditors)});
-    // return JSON.stringify(store.getState());
+    state.storage = {};
+    for (let i = 0, key = null; !!(key = localStorage.key(i)); i++) {
+      state.storage[key] = localStorage[key];
+    }
+    const data = JSON.stringify({...state, curveEditors: sanitize(state.curveEditors)}, null, 2);
+    createTextFileAndDownload('editors.json', data);
   };
 
   // init

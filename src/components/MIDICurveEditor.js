@@ -57,7 +57,8 @@ const MIDICurveEditor = ({ id, name, layout, isSelected, selectedEditorId }) => 
   };
 
   const showValues = () => {
-    console.table(innerMIDIValues.current);
+    // console.table(innerMIDIValues.current);
+    alert(innerMIDIValues.current);
   };
 
   let containerClassName = 'MIDI-curve-editor container';

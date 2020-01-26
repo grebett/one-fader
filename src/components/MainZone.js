@@ -40,13 +40,40 @@ const MainZone = ({ curveEditors, selectedEditorId }) => {
 
   return (
     <div className="main-zone container">
-      <h1>MainZone</h1>
-      <div className="upload" onChange={handleFileLoad}>
-        <input type="file" />
-        {!curveEditors.length && <button onClick={init16Editors}>init editors</button>}
-        {!!curveEditors.length && <button onClick={closePage}>reset editors</button>}
-        {!!curveEditors.length && <button onClick={() => window.dump()}>save editors</button>}
-      </div>
+      <h1>One Fader – by grebett</h1>
+      {!selectedEditorId && (
+        <>
+          <fieldset>
+            <legend>Actions</legend>
+            <label htmlFor="upload">
+              <i class="fas fa-upload"></i> Load Editors
+            </label>
+            <input
+              type="file"
+              id="upload"
+              className="upload"
+              onChange={handleFileLoad}
+              style={{ display: 'none' }}
+            />
+            {!curveEditors.length && (
+              <button onClick={init16Editors}>
+                <i className="fas fa-plus-square"></i>Initialize editors
+              </button>
+            )}
+            {!!curveEditors.length && (
+              <button onClick={closePage}>
+                <i className="fas fa-redo-alt"></i>Reset editors
+              </button>
+            )}
+            {!!curveEditors.length && (
+              <button onClick={() => window.dump()}>
+                <i className="fas fa-save"></i>Save editors
+              </button>
+            )}
+          </fieldset>
+        </>
+      )}
+      {selectedEditorId && <div className="padding"></div>}
       {curveEditors.map((editor, i) => {
         const isSelected = selectedEditorId === editor.id;
         const className = isSelected ? 'MIDI-curve-editor-placeholder' : 'MIDI-curve-editor-container';

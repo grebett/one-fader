@@ -76,7 +76,7 @@ const RightPanel = ({ selectedEditorId }) => {
   if (selectedEditor) {
     return (
       <div className="right-panel container">
-        <h1>RightPanel</h1>
+        <h1>MIDI Curve Editor</h1>
         {selectedEditorId && (
           <form className="right-panel-controls" onSubmit={handleSubmit}>
             <div className="right-panel-control">
@@ -188,18 +188,14 @@ const RightPanel = ({ selectedEditorId }) => {
             </div>
             <br />
             <button type="submit" onClick={unselectEditor}>
-              ╳
+              <i className="fas fa-times"></i>
             </button>
           </form>
         )}
       </div>
     );
   } else {
-    return (
-      <div className="right-panel container">
-        <h1>RightPanel</h1>
-      </div>
-    );
+    return null;
   }
 };
 

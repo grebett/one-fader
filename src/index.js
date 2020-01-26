@@ -8,6 +8,8 @@ import { createStore } from 'redux';
 import rootReducer from './store/reducers';
 
 import App from './App';
+
+import '@fortawesome/fontawesome-free/css/all.css';
 import './index.css';
 
 // React App

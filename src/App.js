@@ -6,8 +6,6 @@ import { MIDIHandler } from './components/MIDIHandler';
 
 import './App.css';
 
-const createEditorsIds = n => Array(n).fill(0).map((_, i) => `editor-${i}`);
-
 const bindStoreToMIDIHandler = MIDIHandler();
 
 const sanitize = editors => {
@@ -39,12 +37,12 @@ const App = ({ store }) => {
       state.storage[key] = localStorage[key];
     }
     const data = JSON.stringify({...state, curveEditors: sanitize(state.curveEditors)}, null, 2);
-    createTextFileAndDownload('editors.json', data);
+    createTextFileAndDownload('page.midieds', data);
   };
 
   // init
   useEffect(() => {
-    dispatch({type: 'INIT_CURVE_EDITORS', payload: { ids: createEditorsIds(16) }});
+    // dispatch({type: 'INIT_CURVE_EDITORS', payload: { ids: createEditorsIds(0) }});
     bindStoreToMIDIHandler(store);
   }, [dispatch, store]);
 

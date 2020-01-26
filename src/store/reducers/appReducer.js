@@ -8,6 +8,13 @@ const initialState = {
 
 const appReducer = (state = initialState, action) => {
   switch (action.type) {
+    case 'RESET_STATE': {
+      return initialState;
+    }
+    case 'INIT_STATE': {
+      const { state } = action.payload;
+      return state;
+    }
     case 'INIT_CURVE_EDITORS': {
       const { ids } = action.payload;
       const curveEditors = ids.map(id => ({

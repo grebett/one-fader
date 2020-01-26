@@ -173,7 +173,8 @@ const MIDIHandler = () => {
         );
       }
       if (!editors.length) {
-        throw new Error('No editor has been found. Check the App component...');
+        console.log('No editors. Should we send note off and stop all ticking callbacks?');
+        return;
       }
 
       // 0] INIT (we want to start fresh after a param has been changed in the editors GUI)

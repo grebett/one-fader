@@ -144,14 +144,14 @@ const RightPanel = ({ selectedEditorId }) => {
                 <option value="noteoff">note-off</option>
               </select>
             </div>
-            <div className="right-panel-control">
+            {inputs.noteEvent === 'noteon' && <div className="right-panel-control">
               <label>Loop</label>
               <select name="loop" value={inputs.loop} onChange={handleInputChange}>
                 <option value="">false</option>
                 <option value="restart">restart</option>
                 <option value="bounce">bounce</option>
               </select>
-            </div>
+            </div>}
             <h3>Triggers</h3>
             <div className="right-panel-control">
               <label>Velocity boundaries</label>

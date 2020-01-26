@@ -269,6 +269,7 @@ const MIDIHandler = () => {
           if (noteOffTriggeredEditors[voice].length) {
             let maxDuration = 0;
             noteOffTriggeredEditors[voice].forEach(editor => {
+              editor.loop = false; // a noteoff event can't be looped as we'd never know when to send the noteoff event
               const durationMs = startTickingCallback(editor, note, noteOffTickingCallbacksKillers);
               if (durationMs > maxDuration) {
                 maxDuration = durationMs;

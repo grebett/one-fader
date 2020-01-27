@@ -2,6 +2,7 @@
   "controllers": [
     "MIDI Touchbar User",
     "VMPK Output",
-    "SL GRAND"
+    "SL GRAND",
+    "Joue Play"
   ]
 }

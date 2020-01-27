@@ -239,7 +239,7 @@ const MIDIHandler = () => {
         const noteOffTriggeredEditors = noteTriggeredEditors.noteoff;
         const noteOnTriggeredEditors = noteTriggeredEditors.noteon;
         if (type === 'noteon') {
-          DEBUG && console.log('📀noteon has been called');
+          DEBUG && console.log(`📀noteon has been called on voice ${voice} with note`, note);
           // send noteoff if some noteoff curve editor has postponed it and clear everything
           if (noteOffclearTimeouts[note.number]) {
             DEBUG &&
@@ -264,7 +264,7 @@ const MIDIHandler = () => {
           DEBUG && console.log('🎹playing noteon', IACDriverBuses[voice].name, note, velocity);
           IACDriverBuses[voice].playNote(note.number, channel, { velocity });
         } else if (type === 'noteoff') {
-          DEBUG && console.log('📀noteoff has been called');
+          DEBUG && console.log(`📀noteoff has been called on voice ${voice} with note`, note);
           // start note-off curves
           if (noteOffTriggeredEditors[voice].length) {
             let maxDuration = 0;

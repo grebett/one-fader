@@ -165,7 +165,49 @@ const MIDIHandler = () => {
     // One Fader to rule them all, One Fader to find them,
     // One Fader to bring them all and in the music bind them
     // In the Land of MIDI where the CCs lie.
+    let y = 0;
+    let ccY = 0;
+    let speedY = 0;
+    const STEP_PX = 1;
+    let listener = null;
+    let tmp = null;
     const main = () => {
+      const MouseSpeed = require('mouse-speed');
+      const speed = new MouseSpeed();
+      speed.init(() => {
+        speedY = speed.speedY;
+      });
+      if (listener) window.removeEventListener('mousemove', listener);
+      listener = ({ screenX, screenY }) => {
+        requestAnimationFrame(() => {
+          const inc = 1 + Math.abs(Math.floor(speedY / 4));
+          // if (screenX > x + STEP_PX) {
+          //   x = screenX;
+          //   ccX = ccX + inc < 127 ? ccX + inc : 127;
+          // } else if (screenX < x - STEP_PX) {
+          //   x = screenX;
+          //   ccX = ccX - inc > 0 ? ccX - inc : 0;
+          // }
+          if (screenY > y + STEP_PX) {
+            y = screenY;
+            tmp = ccY - inc > 0 ? ccY - inc : 0;
+            if (ccY !== tmp) {
+              ccY = tmp;
+            }
+            ccY = ccY - inc > 0 ? ccY - inc : 0;
+          } else if (screenY < y - STEP_PX) {
+            y = screenY;
+            tmp = ccY + inc < 127 ? ccY + inc : 127;
+          }
+          if (ccY !== tmp) {
+            ccY = tmp;
+            // console.log(ccY);
+            editors.forEach(editor => computeCCAndSendToIACDriverBuses(ccY, editor, IACDriverBuses));
+          }
+        })
+      };
+      window.addEventListener('mousemove', listener);
+
       const editors = store.getState().app.curveEditors; // updated with every change to the store
       if (!controllers.length) {
         throw new Error(

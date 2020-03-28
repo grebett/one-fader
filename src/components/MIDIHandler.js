@@ -151,8 +151,8 @@ const MIDIHandler = () => {
     }
 
     // 0a] get all 32 inputs and 32 outputs and controllers
-    const divisimatePorts = getDivisimatePorts(32);
-    const IACDriverBuses = getIACDriverBuses(32);
+    const divisimatePorts = getDivisimatePorts(30); // we use 31 and 32 with transmidifer... if we need more port, we should set them as other number there and change code here after
+    const IACDriverBuses = getIACDriverBuses(30);
     const controllers = getControllers(config.controllers);
     // 0b] keep a reference of all ticking callbacks killer functions (roughly cancelInterval functions)
     const noteOnTickingCallbacksKillers = twoDimensionalArray(127);
